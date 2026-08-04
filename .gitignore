@@ -1,0 +1,10 @@
+# 収集データ・APIキーはリポジトリに含めない
+data/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+secrets.json
+
+__pycache__/
+*.pyc
+.DS_Store
