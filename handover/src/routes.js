@@ -244,6 +244,50 @@ route('POST', '/api/users/:id/admin', async (ctx) => {
   json(ctx.res, 200, { user: publicUser(store.setUserAdmin(target.id, Boolean(isAdmin))) });
 });
 
+/**
+ * 生存確認。ログイン不要で開ける代わりに、業務データは一切返さない。
+ *
+ * 時間外にも使うなら「サーバが動いているか」を人が確かめられる必要がある。
+ * お客様が来てから気づくのでは遅いので、ブックマークして朝夕に見る想定。
+ */
+route(
+  'GET',
+  '/health',
+  async (ctx) => {
+    const uptimeSec = Math.floor(process.uptime());
+    const since = new Date(Date.now() - uptimeSec * 1000);
+
+    if (ctx.req.headers.accept?.includes('text/html')) {
+      const h = Math.floor(uptimeSec / 3600);
+      const m = Math.floor((uptimeSec % 3600) / 60);
+      const stamp = (d) =>
+        `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ` +
+        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+      return send(ctx.res, 200, 'text/html; charset=utf-8',
+        `<!doctype html><meta charset="utf-8"><title>稼働確認</title>
+         <meta name="viewport" content="width=device-width,initial-scale=1">
+         <body style="font-family:system-ui,'Hiragino Kaku Gothic ProN',sans-serif;
+                      display:grid;place-items:center;min-height:90vh;margin:0;text-align:center">
+           <div>
+             <div style="font-size:64px;line-height:1">✅</div>
+             <h1 style="font-size:28px;margin:12px 0">動いています</h1>
+             <p style="color:#5b6b80;line-height:1.9;font-size:15px">
+               起動してから ${h}時間${m}分<br>
+               起動時刻：${stamp(since)}<br>
+               現在時刻：${stamp(new Date())}
+             </p>
+             <p><a href="/" style="font-size:16px">引渡し管理をひらく</a></p>
+           </div>
+         </body>`,
+        { 'cache-control': 'no-store' });
+    }
+
+    json(ctx.res, 200, { ok: true, uptimeSec, startedAt: since.toISOString(), now: new Date().toISOString() });
+  },
+  { auth: false }
+);
+
 /** 引渡票に刷り込む差出人名。運用先ごとに環境変数で差し替える。 */
 route('GET', '/api/config', async (ctx) => {
   requireUser(ctx);

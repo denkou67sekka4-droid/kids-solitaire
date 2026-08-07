@@ -12,6 +12,7 @@
     "dev": "node --no-warnings --watch src/server.js",
     "cert": "bash scripts/make-cert.sh",
     "adduser": "node --no-warnings scripts/adduser.mjs",
+    "backup": "node --no-warnings scripts/backup.mjs",
     "test": "node --no-warnings --test \"test/*.test.js\"",
     "smoke": "node --no-warnings scripts/smoke.mjs"
   },

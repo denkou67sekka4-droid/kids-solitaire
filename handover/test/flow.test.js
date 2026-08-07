@@ -483,6 +483,28 @@ test('パストラバーサルでファイルを読み出せない', async () =>
   }
 });
 
+test('生存確認はログインなしで見られる', async () => {
+  const anon = await fetch(`${BASE}/health`);
+  assert.equal(anon.status, 200);
+
+  const body = await anon.json();
+  assert.equal(body.ok, true);
+  assert.ok(Number.isInteger(body.uptimeSec));
+});
+
+test('生存確認は業務データを一切返さない', async () => {
+  // ログイン不要で開ける以上、顧客情報が混じっていてはいけない
+  const json = await (await fetch(`${BASE}/health`)).text();
+  const html = await (await fetch(`${BASE}/health`, { headers: { accept: 'text/html' } })).text();
+
+  for (const text of [json, html]) {
+    for (const secret of ['山田', '090-1234', 'JT-2026', handover.token, 'customer']) {
+      assert.ok(!text.includes(secret), `生存確認に「${secret}」が漏れている`);
+    }
+  }
+  assert.match(html, /動いています/);
+});
+
 test('ログアウトするとアクセスできなくなる', async () => {
   await call('/api/logout', { method: 'POST' });
   const res = await call('/api/handovers');

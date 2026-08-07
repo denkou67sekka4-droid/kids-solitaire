@@ -44,6 +44,10 @@ if not defined NODE_EXE (
   exit /b 1
 )
 
+rem HANDOVER_SERVICE は autostart.ps1 から自動起動されたときに立つ。
+rem そのときは人が見ていないので、ブラウザを開いたり入力待ちで止まったりしない。
+if defined HANDOVER_SERVICE goto :run
+
 echo.
 echo   荷物引渡し管理を起動します...
 echo   （この画面を閉じると停止します）
@@ -52,7 +56,10 @@ echo.
 rem 起動が済んだころにブラウザを開く
 start "" /b cmd /c "timeout /t 2 >nul & start "" http://localhost:%PORT%/"
 
+:run
 "%NODE_EXE%" --no-warnings src\server.js
+
+if defined HANDOVER_SERVICE exit /b %errorlevel%
 
 echo.
 echo   サーバが停止しました。
