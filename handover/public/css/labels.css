@@ -1,0 +1,74 @@
+/* ==========================================================================
+   荷物ラベル（荷札）
+
+   引渡票と違ってFAXは通らない（社内のプリンタで刷って箱に貼る）。
+   ただし倉庫では汚れ・折れ・斜めからの読み取りが起きるので、
+   QRは大きめ（40mm）を保つ。A4に2枚並べる。
+   ========================================================================== */
+
+#labels { display: grid; gap: 16px; }
+
+.label {
+  background: #fff;
+  border: 2.5pt solid #000;
+  border-radius: 4px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: start;
+  break-inside: avoid;
+}
+
+.label-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 2pt solid #000;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+.label-head .title { font-size: 13px; font-weight: 700; letter-spacing: .22em; }
+.label-head .seq { font-size: 26px; font-weight: 700; font-family: var(--mono); }
+
+.label-body dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+.label-body dt { font-size: 11px; font-weight: 700; color: #000; padding-top: 3px; }
+.label-body dd { margin: 0; font-size: 14px; word-break: break-word; }
+.label-body dd.name { font-size: 22px; font-weight: 700; line-height: 1.3; }
+
+.label-qr { text-align: center; }
+.label-qr img {
+  display: block;
+  width: 40mm;
+  height: 40mm;
+  image-rendering: pixelated;
+}
+.label-qr .token {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+.label-qr .caption { font-size: 9px; letter-spacing: .1em; margin-bottom: 3px; }
+
+@media print {
+  @page { size: A4 portrait; margin: 10mm; }
+
+  #labels { gap: 0; }
+  .label {
+    border-width: 1.5pt;
+    /* A4縦(297mm) - 余白20mm を2分割。切り取りやすいよう少し余裕をみる */
+    height: 132mm;
+    margin-bottom: 6mm;
+    align-content: start;
+  }
+  /* 2枚ごとに改ページ */
+  .label:nth-child(2n) { page-break-after: always; break-after: page; }
+  .label:last-child { page-break-after: auto; break-after: auto; }
+
+  .label-body dd.name { font-size: 20pt; }
+  .label-head .seq { font-size: 22pt; }
+}

@@ -1,0 +1,289 @@
+/* ==========================================================================
+   荷物引渡し管理 — 共通スタイル
+
+   3つの見え方を1枚で面倒みる:
+     1. 事務デスクトップ … 情報密度優先のフォーム
+     2. 倉庫のスマホ     … 屋外・手袋を想定して大きめのタップ領域と高コントラスト
+     3. 印刷 / FAX       … 純黒＋純白のみ。網掛け・薄い罫線はFAXで潰れるので使わない
+   ========================================================================== */
+
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --line: #c8d0da;
+  --line-strong: #93a1b3;
+  --text: #16202e;
+  --text-muted: #5b6b80;
+
+  --accent: #0b5fa5;
+  --accent-dark: #073f6e;
+
+  --ok: #0d7038;
+  --ok-bg: #e6f5ec;
+  --warn: #9a5b00;
+  --warn-bg: #fdf3e2;
+  --danger: #b3261e;
+  --danger-bg: #fdecea;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(16, 30, 50, .08), 0 4px 14px rgba(16, 30, 50, .06);
+
+  --font: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN",
+          "Noto Sans JP", Meiryo, sans-serif;
+  --mono: ui-monospace, "SF Mono", Consolas, "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* --- 骨格 ---------------------------------------------------------------- */
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--accent-dark);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
+  padding-top: max(10px, env(safe-area-inset-top));
+}
+.appbar h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .02em; }
+.appbar a { color: #fff; text-decoration: none; }
+.appbar .spacer { flex: 1; }
+.appbar .who { font-size: 13px; opacity: .85; }
+.appbar .offline {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+}
+.appbar .back {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; margin-left: -6px;
+  border-radius: 8px; font-size: 22px; line-height: 1;
+}
+.appbar .back:hover { background: rgba(255, 255, 255, .14); }
+
+main { max-width: 900px; margin: 0 auto; padding: 20px 16px 64px; }
+main.wide { max-width: 1200px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+.card > h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--line);
+}
+
+/* --- フォーム ------------------------------------------------------------ */
+
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 16px; }
+.grid .full { grid-column: 1 / -1; }
+@media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 5px; color: var(--text-muted); }
+label .req { color: var(--danger); margin-left: 3px; }
+
+input, select, textarea {
+  width: 100%;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 16px; /* iOS の自動ズームを防ぐため 16px 未満にしない */
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 3px solid rgba(11, 95, 165, .28);
+  border-color: var(--accent);
+}
+input:disabled, textarea:disabled { background: #f2f4f7; color: var(--text-muted); }
+textarea { resize: vertical; min-height: 78px; }
+
+.hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+/* --- ボタン -------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;            /* 手袋でも押せる大きさ */
+  padding: 0 20px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .12s, box-shadow .12s;
+}
+.btn:hover:not(:disabled) { background: #f4f7fb; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: var(--accent-dark); }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.danger:hover:not(:disabled) { background: #8f1e17; }
+.btn.big { min-height: 60px; font-size: 18px; width: 100%; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--accent); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.actions.end { justify-content: flex-end; }
+
+/* --- メニュー ------------------------------------------------------------ */
+
+.menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.menu a {
+  display: block;
+  padding: 24px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: var(--text);
+}
+.menu a:hover { background: #f6f9fd; }
+.menu a strong { display: block; font-size: 18px; margin-bottom: 6px; }
+.menu a span { font-size: 13px; color: var(--text-muted); }
+.menu a .ico { font-size: 30px; display: block; margin-bottom: 10px; }
+
+/* --- 状態バッジ ---------------------------------------------------------- */
+
+.badge {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.badge.issued    { background: var(--warn-bg);   color: var(--warn);   border-color: #e6cfa4; }
+.badge.completed { background: var(--ok-bg);     color: var(--ok);     border-color: #b3ddc4; }
+.badge.cancelled { background: #eceff3;          color: var(--text-muted); border-color: var(--line); }
+
+/* --- 通知・注意書き ------------------------------------------------------ */
+
+.note {
+  padding: 14px 16px;
+  border-radius: 8px;
+  border-left: 5px solid;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.note.info   { background: #e8f1fa; border-color: var(--accent); }
+.note.ok     { background: var(--ok-bg); border-color: var(--ok); }
+.note.warn   { background: var(--warn-bg); border-color: var(--warn); }
+.note.danger { background: var(--danger-bg); border-color: var(--danger); }
+.note strong { display: block; margin-bottom: 4px; }
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translate(-50%, 20px);
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 14px 20px;
+  border-radius: 10px;
+  background: #16202e;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 100;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.err { background: var(--danger); }
+#toast.ok  { background: var(--ok); }
+
+/* --- 表 ------------------------------------------------------------------ */
+
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 11px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { background: #f4f6f9; font-size: 12px; color: var(--text-muted); position: sticky; top: 0; }
+tbody tr:hover { background: #f6f9fd; }
+td.wrap { white-space: normal; min-width: 180px; }
+
+.token {
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 0; font-size: 15px; }
+dl.kv dt { color: var(--text-muted); font-size: 13px; font-weight: 600; }
+dl.kv dd { margin: 0; word-break: break-word; }
+@media (max-width: 520px) {
+  dl.kv { grid-template-columns: 1fr; gap: 2px; }
+  dl.kv dd { margin-bottom: 10px; }
+}
+
+.empty { text-align: center; padding: 48px 16px; color: var(--text-muted); }
+
+/* ==========================================================================
+   印刷 / FAX
+   FAXは2値化される。網掛け・淡色・細罫線はノイズになるので徹底的に排除する。
+   ========================================================================== */
+@media print {
+  @page { size: A4 portrait; margin: 14mm; }
+
+  html, body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+  .appbar, .actions, .no-print, #toast { display: none !important; }
+  main { max-width: none; padding: 0; margin: 0; }
+
+  .card {
+    box-shadow: none !important;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: #fff !important;
+  }
+
+  /* 薄いグレーは全部つぶして純黒か純白にする */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  th { background: #fff !important; }
+
+  .sheet table, .sheet th, .sheet td { border: 1.2pt solid #000 !important; }
+  .badge { border: 1.2pt solid #000 !important; }
+}

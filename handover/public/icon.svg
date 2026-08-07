@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="荷物引渡し管理">
+  <rect width="512" height="512" rx="96" fill="#073f6e"/>
+  <!-- 段ボール箱 -->
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M256 150 106 218v152l150 68 150-68V218z"/>
+    <path d="M106 218l150 68 150-68"/>
+    <path d="M256 286v152"/>
+  </g>
+  <!-- 右下にQRの目印 -->
+  <g fill="#ffd45a">
+    <rect x="300" y="300" width="96" height="96" rx="12"/>
+  </g>
+  <g fill="#073f6e">
+    <rect x="322" y="322" width="52" height="52" rx="6"/>
+  </g>
+  <g fill="#ffd45a">
+    <rect x="338" y="338" width="20" height="20"/>
+  </g>
+</svg>

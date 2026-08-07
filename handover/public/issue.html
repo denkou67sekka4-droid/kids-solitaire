@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>引渡票の発行｜荷物引渡し管理</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="icon" href="/icon.svg">
+</head>
+<body>
+  <header class="appbar"></header>
+  <main>
+    <form id="form">
+      <div class="card">
+        <h2>お客様情報</h2>
+        <div class="grid">
+          <div>
+            <label for="customer_name">お客様名 <span class="req" aria-hidden="true">*</span></label>
+            <input id="customer_name" name="customer_name" required maxlength="100" autocomplete="off">
+          </div>
+          <div>
+            <label for="customer_kana">フリガナ</label>
+            <input id="customer_kana" name="customer_kana" maxlength="100" autocomplete="off">
+          </div>
+          <div>
+            <label for="company">会社名・部署</label>
+            <input id="company" name="company" maxlength="120" autocomplete="off">
+          </div>
+          <div>
+            <label for="phone">電話番号</label>
+            <input id="phone" name="phone" type="tel" maxlength="40" autocomplete="off">
+          </div>
+          <div class="full">
+            <label for="email">メールアドレス</label>
+            <input id="email" name="email" type="email" maxlength="200" autocomplete="off">
+            <p class="hint">QRコードをメールで送る場合の宛先。控えとして残ります。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>荷物情報</h2>
+        <div class="grid">
+          <div>
+            <label for="order_no">受注番号・伝票番号</label>
+            <input id="order_no" name="order_no" maxlength="60" autocomplete="off">
+          </div>
+          <div>
+            <label for="item_count">個数 <span class="req" aria-hidden="true">*</span></label>
+            <input id="item_count" name="item_count" type="number" min="1" max="9999" value="1" required>
+          </div>
+          <div class="full">
+            <label for="item_desc">品名</label>
+            <input id="item_desc" name="item_desc" maxlength="300" autocomplete="off">
+          </div>
+          <div>
+            <label for="storage_location">保管場所</label>
+            <input id="storage_location" name="storage_location" maxlength="100" autocomplete="off"
+                   placeholder="例）第2倉庫 A-12">
+          </div>
+          <div></div>
+          <div>
+            <label for="pickup_from">引取可能日</label>
+            <input id="pickup_from" name="pickup_from" type="date">
+          </div>
+          <div>
+            <label for="pickup_until">引取期限</label>
+            <input id="pickup_until" name="pickup_until" type="date">
+          </div>
+          <div class="full">
+            <label for="note">備考</label>
+            <textarea id="note" name="note" maxlength="1000"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions end">
+        <a class="btn" href="/">キャンセル</a>
+        <button class="btn primary" type="submit" id="submitBtn">発行してQRを表示</button>
+      </div>
+    </form>
+  </main>
+  <script type="module" src="/js/issue.js"></script>
+</body>
+</html>

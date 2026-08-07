@@ -1,0 +1,25 @@
+{
+  "name": "handover-qr",
+  "version": "1.0.0",
+  "description": "荷物引渡し管理アプリ（QR発行 / スマホ読取 / 電子サイン）",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "dev": "node --no-warnings --watch src/server.js",
+    "cert": "bash scripts/make-cert.sh",
+    "adduser": "node --no-warnings scripts/adduser.mjs",
+    "test": "node --no-warnings --test \"test/*.test.js\"",
+    "smoke": "node --no-warnings scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "jsqr": "^1.4.0",
+    "qrcode-generator": "^2.0.4"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  }
+}

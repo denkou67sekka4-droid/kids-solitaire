@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>引渡票の詳細｜荷物引渡し管理</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="icon" href="/icon.svg">
+  <style>
+    .sig-box { border: 1px solid var(--line-strong); border-radius: 8px; background: #fff; padding: 8px; }
+    .sig-box img { display: block; width: 100%; max-width: 460px; height: auto; }
+    .timeline { list-style: none; margin: 0; padding: 0; }
+    .timeline li {
+      position: relative;
+      padding: 0 0 18px 24px;
+      border-left: 2px solid var(--line);
+      font-size: 14px;
+    }
+    .timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .timeline li::before {
+      content: ""; position: absolute; left: -7px; top: 6px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--accent); border: 2px solid #fff;
+    }
+    .timeline .when { color: var(--text-muted); font-size: 12px; }
+    .timeline .what { font-weight: 700; }
+    .hash { font-family: var(--mono); font-size: 11px; color: var(--text-muted); word-break: break-all; }
+  </style>
+</head>
+<body>
+  <header class="appbar"></header>
+  <main>
+    <div id="content" aria-busy="true"><p class="empty">読み込み中…</p></div>
+  </main>
+  <script type="module" src="/js/detail.js"></script>
+</body>
+</html>
