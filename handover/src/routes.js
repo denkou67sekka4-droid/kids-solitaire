@@ -119,6 +119,7 @@ route(
     // ユーザーの存在有無を応答時間から推測されないよう、失敗経路をそろえる
     const ok = user ? store.verifyPassword(password, user.password_hash) : false;
     if (!ok) throw new HttpError(401, 'ユーザー名またはパスワードが違います');
+    if (!user.active) throw new HttpError(403, 'このアカウントは無効になっています。管理者にご連絡ください。');
 
     const { token, expires } = store.createSession(user.id, SESSION_DAYS);
     setCookie(ctx.res, SESSION_COOKIE, token, {
@@ -142,11 +143,106 @@ route(
   '/api/me',
   async (ctx) => {
     json(ctx.res, 200, {
-      user: ctx.user ? { username: ctx.user.username, displayName: ctx.user.display_name } : null,
+      user: ctx.user
+        ? {
+            id: ctx.user.id,
+            username: ctx.user.username,
+            displayName: ctx.user.display_name,
+            isAdmin: Boolean(ctx.user.is_admin),
+          }
+        : null,
     });
   },
   { auth: false }
 );
+
+/* --- 担当者アカウント（管理者のみ） -------------------------------- */
+
+function requireAdmin(ctx) {
+  const user = requireUser(ctx);
+  if (!user.is_admin) throw new HttpError(403, 'この操作は管理者のみ行えます');
+  return user;
+}
+
+const publicUser = (u) => ({
+  id: u.id,
+  username: u.username,
+  displayName: u.display_name,
+  isAdmin: Boolean(u.is_admin),
+  active: Boolean(u.active),
+  createdAt: u.created_at,
+  issuedCount: u.issued_count ?? 0,
+});
+
+route('GET', '/api/users', async (ctx) => {
+  requireAdmin(ctx);
+  json(ctx.res, 200, { users: store.listUsers().map(publicUser) });
+});
+
+route('POST', '/api/users', async (ctx) => {
+  requireAdmin(ctx);
+  checkOrigin(ctx.req);
+  const body = await readJson(ctx.req);
+
+  const username = String(body.username ?? '').trim().toLowerCase();
+  const displayName = String(body.displayName ?? '').trim().slice(0, 60);
+
+  if (!/^[a-z0-9._-]{2,30}$/.test(username)) {
+    throw new HttpError(400, 'ユーザー名は半角英数字・記号(.｜_｜-)の2〜30文字で入力してください');
+  }
+  if (!displayName) throw new HttpError(400, '表示名を入力してください');
+  if (store.findUserByName(username)) throw new HttpError(409, `ユーザー名「${username}」は既に使われています`);
+
+  // パスワードは自動生成し、この応答でだけ返す（保存するのはハッシュのみ）
+  const password = store.generatePassword();
+  const created = store.createUser({ username, password, displayName, isAdmin: Boolean(body.isAdmin) });
+
+  json(ctx.res, 201, { user: publicUser(created), password });
+});
+
+route('POST', '/api/users/:id/password', async (ctx) => {
+  requireAdmin(ctx);
+  checkOrigin(ctx.req);
+  const target = store.getUser(Number(ctx.params.id));
+  if (!target) throw new HttpError(404, '担当者が見つかりません');
+
+  const password = store.generatePassword();
+  store.setUserPassword(target.id, password);
+  json(ctx.res, 200, { user: publicUser(target), password });
+});
+
+route('POST', '/api/users/:id/active', async (ctx) => {
+  const me = requireAdmin(ctx);
+  checkOrigin(ctx.req);
+  const { active } = await readJson(ctx.req);
+
+  const target = store.getUser(Number(ctx.params.id));
+  if (!target) throw new HttpError(404, '担当者が見つかりません');
+
+  // 自分を無効にすると誰も管理できなくなる恐れがある
+  if (target.id === me.id && !active) throw new HttpError(409, '自分自身は無効にできません');
+  if (!active && target.is_admin && store.countAdmins() <= 1) {
+    throw new HttpError(409, '管理者が0人になるため無効にできません');
+  }
+
+  json(ctx.res, 200, { user: publicUser(store.setUserActive(target.id, Boolean(active))) });
+});
+
+route('POST', '/api/users/:id/admin', async (ctx) => {
+  const me = requireAdmin(ctx);
+  checkOrigin(ctx.req);
+  const { isAdmin } = await readJson(ctx.req);
+
+  const target = store.getUser(Number(ctx.params.id));
+  if (!target) throw new HttpError(404, '担当者が見つかりません');
+
+  if (target.id === me.id && !isAdmin) throw new HttpError(409, '自分自身の管理者権限は外せません');
+  if (!isAdmin && store.countAdmins() <= 1) {
+    throw new HttpError(409, '管理者が0人になるため権限を外せません');
+  }
+
+  json(ctx.res, 200, { user: publicUser(store.setUserAdmin(target.id, Boolean(isAdmin))) });
+});
 
 /** 引渡票に刷り込む差出人名。運用先ごとに環境変数で差し替える。 */
 route('GET', '/api/config', async (ctx) => {

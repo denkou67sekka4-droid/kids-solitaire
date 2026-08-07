@@ -6,8 +6,7 @@
  * 「誰が引き渡したか」が履歴に残るので、担当者ごとに分けて作るのがおすすめ。
  * パスワードは自動生成して1度だけ表示する。
  */
-import { randomBytes } from 'node:crypto';
-import { createUser, findUserByName } from '../src/db.js';
+import { createUser, findUserByName, generatePassword } from '../src/db.js';
 
 const [username, displayName] = process.argv.slice(2);
 
@@ -22,12 +21,7 @@ if (findUserByName(username)) {
   process.exit(1);
 }
 
-// 紛らわしい文字を避けて、口頭でも伝えられるパスワードにする
-const password = randomBytes(12)
-  .toString('base64')
-  .replace(/[+/=lIO01]/g, '')
-  .slice(0, 12);
-
+const password = generatePassword();
 createUser({ username, password, displayName: displayName || username });
 
 console.log('');

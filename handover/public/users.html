@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>担当者の管理｜荷物引渡し管理</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="icon" href="/icon.svg">
+  <style>
+    /* パスワードは作成・再発行の直後にしか出せないので、見落とさない見た目にする */
+    .password-box {
+      border: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+      background: #eaf2fb;
+    }
+    .password-box .value {
+      font-family: var(--mono);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      user-select: all;
+      word-break: break-all;
+      margin: 8px 0;
+    }
+    .me { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    tr.inactive td { opacity: .5; }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row-actions .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header class="appbar"></header>
+  <main class="wide">
+    <div id="passwordArea"></div>
+
+    <div class="card">
+      <h2>担当者を追加</h2>
+      <p class="hint" style="margin-top:-8px">
+        引渡しの履歴には表示名が残ります。「誰が引き渡したか」を追えるよう、
+        事務・倉庫の方それぞれに1つずつ作ってください。
+      </p>
+      <form id="addForm">
+        <div class="grid">
+          <div>
+            <label for="displayName">表示名 <span class="req" aria-hidden="true">*</span></label>
+            <input id="displayName" name="displayName" required maxlength="60" placeholder="例）田中">
+          </div>
+          <div>
+            <label for="username">ユーザー名（ログインID） <span class="req" aria-hidden="true">*</span></label>
+            <input id="username" name="username" required maxlength="30" autocapitalize="off"
+                   autocomplete="off" spellcheck="false" placeholder="例）tanaka">
+            <p class="hint">半角英数字と . _ - が使えます</p>
+          </div>
+          <div class="full">
+            <label style="display:flex;align-items:center;gap:8px;font-size:15px">
+              <input type="checkbox" id="isAdmin" style="width:auto;min-height:0">
+              管理者にする（担当者の追加・パスワード再発行ができます）
+            </label>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" type="submit" id="addBtn">追加してパスワードを発行</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>担当者一覧</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>表示名</th><th>ユーザー名</th><th>権限</th><th>状態</th><th>発行件数</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="/js/users.js"></script>
+</body>
+</html>

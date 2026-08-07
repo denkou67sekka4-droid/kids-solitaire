@@ -437,6 +437,48 @@ try {
   await desk.waitForSelector('tbody tr');
   await shot(desk, 'list');
 
+  /* --- 10. 担当者アカウントの管理 ---------------------------------- */
+  console.log('\n[10] 事務9名ぶんのアカウントを配る');
+
+  await desk.goto(`${BASE}/`);
+  await desk.waitForSelector('#usersLink:not([hidden])');
+  assert(true, '管理者のメニューに［担当者の管理］が出る');
+
+  await desk.goto(`${BASE}/users`);
+  await desk.waitForSelector('#addForm');
+  await desk.fill('#displayName', '田中');
+  await desk.fill('#username', 'tanaka');
+  await desk.click('#addBtn');
+  await desk.waitForSelector('.password-box');
+
+  const issuedPassword = (await desk.textContent('.password-box .value')).trim();
+  assert(issuedPassword.length >= 12, `パスワードが発行され画面に出る（${issuedPassword.length}文字）`);
+  await shot(desk, 'users');
+
+  // 配ったアカウントで実際にログインできるか
+  const staffCtx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'ja-JP' });
+  staffCtx.on('weberror', (e) => errors.push({ url: e.page().url(), stack: e.error()?.stack ?? String(e.error()) }));
+  const staff = await staffCtx.newPage();
+  await staff.goto(`${BASE}/login`);
+  await staff.fill('#username', 'tanaka');
+  await staff.fill('#password', issuedPassword);
+  await staff.click('button[type=submit]');
+  await staff.waitForURL(`${BASE}/`);
+  assert(true, '配ったアカウントでログインできる');
+
+  await staff.waitForSelector('.appbar .who');
+  assert((await staff.textContent('.appbar .who')) === '田中', '画面に自分の表示名が出る');
+  assert(await staff.locator('#usersLink').isHidden(), '担当者には［担当者の管理］が出ない');
+
+  // 発行者が記録に残るか
+  await staff.goto(`${BASE}/issue`);
+  await staff.fill('#customer_name', '発行者テスト');
+  await staff.click('#submitBtn');
+  await staff.waitForURL(/\/sheet\?id=/);
+  await staff.waitForSelector('.sheet-head .issuer');
+  assert((await staff.textContent('.sheet-head .issuer')).includes('田中'),
+    '引渡票に発行した担当者名が刷り込まれる');
+
   /* --- 結果 -------------------------------------------------------- */
   if (errors.length) {
     console.error('\n画面側でエラーが発生しました:');

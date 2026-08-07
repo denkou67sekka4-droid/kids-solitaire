@@ -78,6 +78,8 @@ db.exec(`
     username      TEXT    NOT NULL UNIQUE,
     display_name  TEXT    NOT NULL DEFAULT '',
     password_hash TEXT    NOT NULL,
+    is_admin      INTEGER NOT NULL DEFAULT 0,
+    active        INTEGER NOT NULL DEFAULT 1,
     created_at    TEXT    NOT NULL
   );
 
@@ -95,6 +97,8 @@ function addColumnIfMissing(table, column, definition) {
   if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 addColumnIfMissing('events', 'packages_scanned', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'is_admin', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('users', 'active', 'INTEGER NOT NULL DEFAULT 1');
 
 export const nowIso = () => new Date().toISOString();
 
@@ -116,19 +120,63 @@ export function verifyPassword(password, stored) {
   return timingSafeEqual(expected, actual);
 }
 
-export function createUser({ username, password, displayName = '' }) {
+/**
+ * 口頭でも伝えられるパスワードを作る。
+ * 紛らわしい文字（l I O 0 1）を除いてあるのは、
+ * 事務から担当者へ手渡しで伝える場面を想定しているため。
+ */
+export function generatePassword(length = 12) {
+  const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  while (out.length < length) {
+    for (const b of randomBytes(length * 2)) {
+      if (b < 256 - (256 % alphabet.length)) out += alphabet[b % alphabet.length];
+      if (out.length === length) break;
+    }
+  }
+  return out;
+}
+
+export function createUser({ username, password, displayName = '', isAdmin = false }) {
   return db
     .prepare(
-      `INSERT INTO users (username, display_name, password_hash, created_at)
-       VALUES (?, ?, ?, ?) RETURNING id, username, display_name`
+      `INSERT INTO users (username, display_name, password_hash, is_admin, active, created_at)
+       VALUES (?, ?, ?, ?, 1, ?) RETURNING id, username, display_name, is_admin, active`
     )
-    .get(username, displayName || username, hashPassword(password), nowIso());
+    .get(username, displayName || username, hashPassword(password), isAdmin ? 1 : 0, nowIso());
 }
 
 export const findUserByName = (username) =>
   db.prepare('SELECT * FROM users WHERE username = ?').get(username);
 
+export const getUser = (id) => db.prepare('SELECT * FROM users WHERE id = ?').get(id) ?? null;
+
 export const countUsers = () => db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+
+export const listUsers = () =>
+  db
+    .prepare(
+      `SELECT u.id, u.username, u.display_name, u.is_admin, u.active, u.created_at,
+              (SELECT COUNT(*) FROM handovers h WHERE h.issued_by = u.display_name) AS issued_count
+         FROM users u ORDER BY u.is_admin DESC, u.username`
+    )
+    .all();
+
+export const setUserPassword = (id, password) =>
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ? RETURNING id').get(hashPassword(password), id);
+
+/** 無効にしたら、その人のログイン中セッションもその場で切る */
+export function setUserActive(id, active) {
+  const row = db.prepare('UPDATE users SET active = ? WHERE id = ? RETURNING *').get(active ? 1 : 0, id);
+  if (row && !active) db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+  return row ?? null;
+}
+
+export const setUserAdmin = (id, isAdmin) =>
+  db.prepare('UPDATE users SET is_admin = ? WHERE id = ? RETURNING *').get(isAdmin ? 1 : 0, id) ?? null;
+
+export const countAdmins = () =>
+  db.prepare('SELECT COUNT(*) AS n FROM users WHERE is_admin = 1 AND active = 1').get().n;
 
 export function createSession(userId, days = 7) {
   const token = randomBytes(32).toString('base64url');
@@ -147,9 +195,9 @@ export function findSessionUser(token) {
   return (
     db
       .prepare(
-        `SELECT u.id, u.username, u.display_name
+        `SELECT u.id, u.username, u.display_name, u.is_admin
            FROM sessions s JOIN users u ON u.id = s.user_id
-          WHERE s.token = ? AND s.expires_at > ?`
+          WHERE s.token = ? AND s.expires_at > ? AND u.active = 1`
       )
       .get(token, nowIso()) ?? null
   );

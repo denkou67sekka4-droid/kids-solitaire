@@ -35,6 +35,11 @@
 
 * { box-sizing: border-box; }
 
+/* hidden 属性を確実に効かせる。
+   ブラウザ標準の [hidden]{display:none} は作者スタイルより弱いので、
+   .menu a{display:block} のような指定があると打ち消されてしまう。 */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {

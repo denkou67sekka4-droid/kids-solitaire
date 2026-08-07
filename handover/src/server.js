@@ -2,7 +2,6 @@ import { createServer as createHttpServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
 import { readFileSync, existsSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
-import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -27,6 +26,7 @@ const PAGES = {
   '/scan': 'scan.html',
   '/list': 'list.html',
   '/detail': 'detail.html',
+  '/users': 'users.html',
 };
 const PUBLIC_PAGES = new Set(['/login']);
 
@@ -36,8 +36,8 @@ const PUBLIC_PAGES = new Set(['/login']);
 function ensureAdmin() {
   if (store.countUsers() > 0) return;
 
-  const password = process.env.HANDOVER_ADMIN_PASSWORD || randomBytes(9).toString('base64url');
-  store.createUser({ username: 'admin', password, displayName: '管理者' });
+  const password = process.env.HANDOVER_ADMIN_PASSWORD || store.generatePassword();
+  store.createUser({ username: 'admin', password, displayName: '管理者', isAdmin: true });
 
   console.log('\n' + '='.repeat(62));
   console.log('  初回起動: 管理者アカウントを作成しました');

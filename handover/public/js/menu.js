@@ -1,6 +1,8 @@
 import { api, esc, mountAppBar } from './app.js';
 
-await mountAppBar({ title: '荷物引渡し管理' });
+const me = await mountAppBar({ title: '荷物引渡し管理' });
+
+if (me?.isAdmin) document.getElementById('usersLink').hidden = false;
 
 try {
   const { summary } = await api('/api/handovers?limit=1');

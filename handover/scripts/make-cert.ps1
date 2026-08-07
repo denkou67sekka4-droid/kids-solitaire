@@ -26,6 +26,12 @@ $ips = Get-NetIPAddress -AddressFamily IPv4 |
 # IPで接続する場合、ブラウザは DNS= ではなく IPAddress= のエントリしか見ないため、
 # 実際のIPを IPAddress= として入れておかないと証明書が拒否される。
 $san = @('DNS=localhost', 'IPAddress=127.0.0.1')
+
+# コンピュータ名も入れておく。社内DHCPでIPが変わっても
+# http://PC名:8080 で開けるようにしておくと、貼り替えの手間が減る
+$san += "DNS=$env:COMPUTERNAME"
+$san += "DNS=$env:COMPUTERNAME.local"
+
 foreach ($ip in $ips) { $san += "IPAddress=$ip" }
 $sanText = '2.5.29.17={text}' + ($san -join '&')
 

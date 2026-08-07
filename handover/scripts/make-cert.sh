@@ -24,6 +24,14 @@ IPS=$(node -e '
 ' 2>/dev/null || true)
 
 ALT="DNS:localhost,IP:127.0.0.1"
+
+# ホスト名も入れておく。社内DHCPでIPが変わっても
+# http://ホスト名:8080 で開けるようにしておくと、貼り替えの手間が減る
+HOST=$(hostname 2>/dev/null || true)
+if [ -n "$HOST" ] && [ "$HOST" != "localhost" ]; then
+  ALT="$ALT,DNS:$HOST,DNS:$HOST.local"
+fi
+
 for ip in $IPS; do
   [ "$ip" = "127.0.0.1" ] && continue
   ALT="$ALT,IP:$ip"
