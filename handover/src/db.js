@@ -422,7 +422,18 @@ export function cancelHandover(id, actor, note = '') {
  * サインを受け取って引渡しを確定する。
  * status を条件に入れているので、二重引渡し（同じQRの使い回し）はここで弾かれる。
  */
-export function completeHandover(id, { actor, receiverName, receiverRelation, signaturePng, note, userAgent, packagesScanned = [] }) {
+export function completeHandover(id, {
+  actor,
+  receiverName,
+  receiverRelation,
+  signaturePng,
+  note,
+  userAgent,
+  packagesScanned = [],
+  // 時間外にお客様ご自身が受け取ったものは 'self_received' で残す。
+  // 係員による荷物の照合を経ていないので、記録上も区別できるようにしておく。
+  eventType = 'completed',
+}) {
   const at = nowIso();
   const row = db
     .prepare(
@@ -435,7 +446,7 @@ export function completeHandover(id, { actor, receiverName, receiverRelation, si
 
   addEvent({
     handover_id: id,
-    type: 'completed',
+    type: eventType,
     at,
     actor,
     receiver_name: receiverName,

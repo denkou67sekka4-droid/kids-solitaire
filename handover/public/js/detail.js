@@ -14,6 +14,7 @@ const EVENT_JA = {
   issued: '発行',
   scanned: 'QR照会',
   completed: '引渡し完了',
+  self_received: '引渡し完了（時間外・お客様セルフ受取）',
   cancelled: '取消',
   edited: '内容を編集',
 };
@@ -23,7 +24,8 @@ const RELATION_JA = { self: 'ご本人', agent: '代理の方' };
 async function load() {
   content.setAttribute('aria-busy', 'true');
   const { handover: h, packages, events } = await api(`/api/handovers/${encodeURIComponent(id)}`);
-  const signed = events.find((e) => e.type === 'completed' && e.has_signature);
+  const signed = events.find((e) => ['completed', 'self_received'].includes(e.type) && e.has_signature);
+  const selfReceived = signed?.type === 'self_received';
 
   // 引渡し時にどの箱を照合したか
   let scannedSeqs = [];
@@ -40,6 +42,7 @@ async function load() {
       <div class="actions">
         <a class="btn primary" href="/sheet?id=${h.id}">引渡票を表示（印刷・FAX）</a>
         <a class="btn primary" href="/labels?id=${h.id}">荷物ラベルを印刷</a>
+        ${h.status === 'issued' ? `<a class="btn" href="/pickup-sheet?id=${h.id}">時間外受取シートを印刷</a>` : ''}
         ${h.status === 'issued' ? `<a class="btn" href="/issue?id=${h.id}">編集</a>` : ''}
         ${h.status === 'issued' ? `<button class="btn danger" id="cancelBtn">この引渡票を取消</button>` : ''}
       </div>
@@ -73,6 +76,12 @@ async function load() {
     ${signed ? `
       <div class="card">
         <h2>受領サイン</h2>
+        ${selfReceived ? `
+          <div class="note warn">
+            <strong>時間外・お客様セルフ受取</strong>
+            お客様ご自身が、ワゴンのQRから受け取りを記録されたものです。<br>
+            <b>係員による荷物の照合（荷物ラベルの読み取り）は行われていません。</b>
+          </div>` : ''}
         <dl class="kv" style="margin-bottom:14px">
           <dt>受領者</dt><dd><b>${esc(signed.receiver_name)}</b>（${esc(RELATION_JA[signed.receiver_relation] ?? signed.receiver_relation)}）</dd>
           <dt>受領日時</dt><dd>${esc(fmtDateTime(signed.at))}</dd>

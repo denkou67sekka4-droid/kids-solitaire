@@ -117,6 +117,8 @@ async function startServer(dbPath) {
       HANDOVER_DB: dbPath,
       HANDOVER_ADMIN_PASSWORD: PASSWORD,
       HANDOVER_ORG_NAME: 'スモークテスト運輸株式会社',
+      // 時間外セルフ受取のQRに入るアドレス（本番は外から届くURLを設定する）
+      HANDOVER_PUBLIC_URL: BASE,
     },
     stdio: ['ignore', 'ignore', 'inherit'],
   });
@@ -478,6 +480,71 @@ try {
   await staff.waitForSelector('.sheet-head .issuer');
   assert((await staff.textContent('.sheet-head .issuer')).includes('田中'),
     '引渡票に発行した担当者名が刷り込まれる');
+
+  /* --- 11. 時間外のお客様セルフ受取 -------------------------------- */
+  console.log('\n[11] 時間外にお客様がご自分で受け取る');
+
+  const night = await deskCtx.request.post(`${BASE}/api/handovers`, {
+    data: { customer_name: '夜間 太郎', company: '夜間商事', item_desc: '棚 2台', item_count: 2,
+            phone: '090-9999-8888', email: 'yakan@example.com' },
+    headers: { origin: BASE },
+  });
+  const nightId = (await night.json()).handover.id;
+
+  // 事務がワゴンに置く紙を印刷する
+  await desk.goto(`${BASE}/pickup-sheet?id=${nightId}`);
+  await desk.waitForSelector('.pickup-qr img');
+  assert(await desk.locator('#warn .note.danger').isHidden(), 'URLが設定されていれば警告は出ない');
+  await shot(desk, 'pickup-sheet');
+
+  const nightToken = (await desk.textContent('.pickup-foot span')).trim();
+
+  // お客様のスマホ（ログインしていない・社外の端末を想定）
+  const guestCtx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+    locale: 'ja-JP',
+  });
+  guestCtx.on('weberror', (e) => errors.push({ url: e.page().url(), stack: e.error()?.stack ?? String(e.error()) }));
+  const guest = await guestCtx.newPage();
+
+  await guest.goto(`${BASE}/r/${nightToken}`);
+  await guest.waitForSelector('.goods');
+  assert(true, 'ログインなしで受取画面が開く');
+
+  const shown = await guest.textContent('#content');
+  assert(shown.includes('夜間 太郎') && shown.includes('棚 2台'), '受け取る品物が表示される');
+  assert(!shown.includes('090-9999-8888') && !shown.includes('yakan@example.com'),
+    'お客様の画面に電話番号・メールを出していない');
+  await shot(guest, 'receive-confirm');
+
+  await guest.click('#toSign');
+  await guest.waitForSelector('#signCanvas');
+  await sign(guest);
+  assert(!(await guest.locator('#submitBtn').isDisabled()), 'サインを書くと確定ボタンが押せる');
+  await shot(guest, 'receive-sign');
+
+  await guest.click('#submitBtn');
+  await guest.waitForSelector('.done-mark');
+  assert((await guest.textContent('#content')).includes('送り状はお忘れなく'),
+    '完了画面で送り状の持ち帰りを案内する');
+  await shot(guest, 'receive-done');
+
+  // 二度目は受け取れない
+  await guest.goto(`${BASE}/r/${nightToken}`);
+  await guest.waitForSelector('.big-message');
+  assert((await guest.textContent('.big-message')).includes('お受け取り済み'),
+    '受け取り済みの番号を開くとその旨が出る');
+
+  // 事務側から見ると、日中の引渡しと区別できる
+  await desk.goto(`${BASE}/detail?id=${nightId}`);
+  await desk.waitForSelector('.sig-box img');
+  const nightDetail = await desk.textContent('#content');
+  assert(nightDetail.includes('時間外・お客様セルフ受取'), '時間外セルフ受取として記録されている');
+  assert(nightDetail.includes('係員による荷物の照合'), '照合を経ていないことが明記されている');
+  await shot(desk, 'detail-self-received');
 
   /* --- 結果 -------------------------------------------------------- */
   if (errors.length) {

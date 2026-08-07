@@ -1,0 +1,93 @@
+/* ==========================================================================
+   時間外受取シート（ワゴンに置く紙）
+
+   読むのは夜間のお客様。係員はいない。
+   ・「何をすればいいか」だけが目に入ること
+   ・薄暗い場所で読まれる前提で、文字を大きく・線を太く
+   ・QRはスマホの標準カメラで少し離れた距離から読まれるので大きめ（50mm）
+   ========================================================================== */
+
+.pickup-head {
+  text-align: center;
+  border-bottom: 3px solid #000;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+.pickup-head .title { font-size: 28px; font-weight: 700; letter-spacing: .12em; }
+.pickup-head .sub { font-size: 14px; margin-top: 6px; }
+
+.pickup-customer {
+  border: 2.5pt solid #000;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.pickup-customer .name { font-size: 26px; font-weight: 700; }
+.pickup-customer .items { font-size: 17px; margin-top: 6px; }
+
+.pickup-main {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: center;
+}
+@media (max-width: 640px) { .pickup-main { grid-template-columns: 1fr; } }
+
+.pickup-steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+.pickup-steps li {
+  counter-increment: s;
+  position: relative;
+  padding: 0 0 18px 44px;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.pickup-steps li::before {
+  content: counter(s);
+  position: absolute;
+  left: 0; top: 0;
+  width: 30px; height: 30px;
+  border: 2.5pt solid #000;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 27px;
+  font-weight: 700;
+  font-size: 17px;
+}
+.pickup-steps li b { font-size: 17px; }
+
+.pickup-qr {
+  text-align: center;
+  border: 2.5pt solid #000;
+  padding: 14px 16px 12px;
+  width: 72mm;
+}
+.pickup-qr img {
+  display: block;
+  width: 50mm; height: 50mm;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
+.pickup-qr .cap { font-size: 12px; font-weight: 700; letter-spacing: .1em; margin-bottom: 8px; }
+.pickup-qr .hint { font-size: 11px; line-height: 1.6; margin-top: 8px; color: #000; }
+
+.pickup-note {
+  margin-top: 20px;
+  border: 1.8pt solid #000;
+  padding: 12px 16px;
+  font-size: 13.5px;
+  line-height: 1.9;
+}
+.pickup-note b { font-size: 15px; }
+
+.pickup-foot {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+@media print {
+  @page { size: A4 portrait; margin: 14mm; }
+  .pickup-head .title { font-size: 24pt; }
+  .pickup-customer .name { font-size: 20pt; }
+  .pickup-main { page-break-inside: avoid; }
+}

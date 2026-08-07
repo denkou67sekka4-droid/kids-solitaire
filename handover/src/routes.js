@@ -291,7 +291,13 @@ route(
 /** 引渡票に刷り込む差出人名。運用先ごとに環境変数で差し替える。 */
 route('GET', '/api/config', async (ctx) => {
   requireUser(ctx);
-  json(ctx.res, 200, { org: process.env.HANDOVER_ORG_NAME || '荷物引渡し窓口' });
+  json(ctx.res, 200, {
+    org: process.env.HANDOVER_ORG_NAME || '荷物引渡し窓口',
+    // 時間外セルフ受取のQRに入れるアドレス。
+    // お客様の端末（社外・モバイル回線）から届く必要があるので、
+    // 社内LANのアドレスではなく外から見えるURLを設定する。
+    publicUrl: (process.env.HANDOVER_PUBLIC_URL ?? '').replace(/\/+$/, ''),
+  });
 });
 
 // --- 引渡票 ---------------------------------------------------------
@@ -474,6 +480,27 @@ route('GET', '/qr/:token.svg', async (ctx) => {
   send(ctx.res, 200, 'image/svg+xml', toSvg(token, { sizeMm: mm }), { 'cache-control': 'private, max-age=3600' });
 });
 
+/**
+ * 時間外セルフ受取シート用のQR。
+ * お客様は標準のカメラアプリで読むので、中身はURLでなければ開かない。
+ * URLの組み立てはサーバ側で行う（画面から任意の文字列をQRにできないようにするため）。
+ */
+route('GET', '/qr/r/:token.svg', async (ctx) => {
+  requireUser(ctx);
+  const token = normalizeToken(ctx.params.token);
+  if (!token) throw new HttpError(400, '引渡番号が不正です');
+
+  const base = (process.env.HANDOVER_PUBLIC_URL ?? '').replace(/\/+$/, '');
+  if (!base) {
+    throw new HttpError(409, 'お客様がアクセスできるURL（HANDOVER_PUBLIC_URL）が設定されていません');
+  }
+
+  const mm = Math.min(Math.max(Number(ctx.url.searchParams.get('mm')) || 50, 20), 200);
+  send(ctx.res, 200, 'image/svg+xml', toSvg(`${base}/r/${token}`, { sizeMm: mm, mode: 'Byte' }), {
+    'cache-control': 'private, max-age=3600',
+  });
+});
+
 route('GET', '/qr/:token.png', async (ctx) => {
   requireUser(ctx);
   const token = normalizeToken(ctx.params.token);
@@ -571,6 +598,123 @@ function verifyPackages(handoverId, body) {
     overrideNote: `【一部のみ引渡し】未確認の荷物: ${missing.join(', ')}（全${all.length}箱）／理由: ${reason}`,
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * 時間外のお客様セルフ受取
+ *
+ * ワゴンに置いた紙のQRを、お客様ご自身のスマホで読み取って受け取りを記録する。
+ * 係員が立ち会わないので、日中の引渡しとは前提がちがう:
+ *   ・ログインできない相手なので、QRに入っている番号そのものが鍵になる
+ *   ・係員による荷物の照合（二段チェック）は行われない
+ *   ・したがって記録は 'self_received' として日中のものと必ず区別する
+ * 紙の受領書にサインしてもらう今の運用と同じ確からしさ、という位置づけ。
+ * ------------------------------------------------------------------ */
+
+/** 総当たりを避けるための簡易な回数制限（IPごと・メモリ上） */
+const rateBuckets = new Map();
+
+function rateLimit(ctx, { key, limit, windowMs }) {
+  const ip = String(ctx.req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() ||
+             ctx.req.socket.remoteAddress || 'unknown';
+  const bucket = `${key}:${ip}`;
+  const now = Date.now();
+
+  const hits = (rateBuckets.get(bucket) ?? []).filter((t) => now - t < windowMs);
+  hits.push(now);
+  rateBuckets.set(bucket, hits);
+
+  // 放っておくと際限なく増えるので、たまに古いものを掃除する
+  if (rateBuckets.size > 5000) {
+    for (const [k, v] of rateBuckets) {
+      if (!v.length || now - v.at(-1) > windowMs) rateBuckets.delete(k);
+    }
+  }
+
+  if (hits.length > limit) {
+    throw new HttpError(429, 'アクセスが多すぎます。しばらく待ってからお試しください。');
+  }
+}
+
+/** お客様の端末に出してよい範囲だけを取り出す（電話番号・メールは渡さない） */
+const publicHandover = (h) => ({
+  token: h.token,
+  status: h.status,
+  customerName: h.customer_name,
+  company: h.company,
+  orderNo: h.order_no,
+  itemDesc: h.item_desc,
+  itemCount: h.item_count,
+  storageLocation: h.storage_location,
+  pickupUntil: h.pickup_until,
+  note: h.note,
+  completedAt: h.completed_at,
+});
+
+route(
+  'GET',
+  '/api/r/:token',
+  async (ctx) => {
+    rateLimit(ctx, { key: 'lookup', limit: 30, windowMs: 60_000 });
+
+    const token = normalizeToken(ctx.params.token);
+    if (!token) throw new HttpError(400, 'この番号は正しくありません');
+
+    const h = store.getHandoverByToken(token);
+    if (!h) throw new HttpError(404, 'お手続きの情報が見つかりません。窓口にお問い合わせください。');
+
+    json(ctx.res, 200, {
+      handover: publicHandover(h),
+      org: process.env.HANDOVER_ORG_NAME || '荷物引渡し窓口',
+    });
+  },
+  { auth: false }
+);
+
+route(
+  'POST',
+  '/api/r/:token/receive',
+  async (ctx) => {
+    rateLimit(ctx, { key: 'receive', limit: 10, windowMs: 60_000 });
+    checkOrigin(ctx.req);
+
+    const token = normalizeToken(ctx.params.token);
+    if (!token) throw new HttpError(400, 'この番号は正しくありません');
+
+    const h = store.getHandoverByToken(token);
+    if (!h) throw new HttpError(404, 'お手続きの情報が見つかりません。窓口にお問い合わせください。');
+
+    if (h.status === 'completed') {
+      throw new HttpError(409, 'このお荷物は受け取り済みとして記録されています。');
+    }
+    if (h.status !== 'issued') {
+      throw new HttpError(409, 'このお手続きは無効になっています。窓口にお問い合わせください。');
+    }
+
+    const body = await readJson(ctx.req);
+    const receiverName = String(body.receiverName ?? '').trim().slice(0, 100);
+    if (!receiverName) throw new HttpError(400, 'お名前をご記入ください');
+
+    const signature = decodeSignature(body.signature);
+
+    const row = store.completeHandover(h.id, {
+      actor: '（お客様セルフ受取）',
+      receiverName,
+      receiverRelation: body.receiverRelation === 'agent' ? 'agent' : 'self',
+      signaturePng: signature,
+      // 係員の照合を経ていないことを、記録そのものに書き残す
+      note: '【時間外セルフ受取】係員による荷物の照合は行われていません',
+      userAgent: String(ctx.req.headers['user-agent'] ?? '').slice(0, 300),
+      packagesScanned: [],
+      eventType: 'self_received',
+    });
+
+    // 同時に二重で押された場合はここで負けた方が null になる
+    if (!row) throw new HttpError(409, 'このお荷物は受け取り済みとして記録されています。');
+
+    json(ctx.res, 200, { handover: publicHandover(row) });
+  },
+  { auth: false }
+);
 
 /* ------------------------------------------------------------------ *
  * 照合

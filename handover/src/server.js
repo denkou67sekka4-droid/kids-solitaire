@@ -23,6 +23,7 @@ const PAGES = {
   '/issue': 'issue.html',
   '/sheet': 'sheet.html',
   '/labels': 'labels.html',
+  '/pickup-sheet': 'pickup-sheet.html',
   '/scan': 'scan.html',
   '/list': 'list.html',
   '/detail': 'detail.html',
@@ -72,6 +73,15 @@ async function handle(req, res, { https }) {
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     throw new HttpError(405, '許可されていないメソッドです');
+  }
+
+  // 2-0. お客様セルフ受取（/r/<引渡番号>）。
+  //      お客様はログインできないので、この画面だけは誰でも開ける。
+  //      中身の出し分けは画面側が /api/r/... を叩いて行う。
+  if (pathname.startsWith('/r/')) {
+    return send(res, 200, 'text/html; charset=utf-8', readFileSync(resolve(PUBLIC_DIR, 'receive.html')), {
+      'cache-control': 'no-cache',
+    });
   }
 
   // 2. HTML ページ

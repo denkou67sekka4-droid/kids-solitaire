@@ -14,18 +14,26 @@ import qrcodeGenerator from './vendor/qrcode-generator.mjs';
 const EC_LEVEL = 'Q';
 const QUIET_ZONE = 4; // JIS/ISO が要求する最小の余白（マス数）。削るとスキャン率が落ちる。
 
-function build(text) {
+/**
+ * mode は 'Alphanumeric' か 'Byte'。
+ *
+ * 引渡番号は英数字モードで詰める。バイトモードより高密度なのでバージョンを低く保て、
+ * それがFAX耐性に直結する。
+ * 一方、時間外セルフ受取のQRにはURLを入れる必要がある。英数字モードは
+ * 大文字と一部記号しか扱えず小文字を表現できないので、そちらはバイトモードを使う。
+ * （こちらは社内プリンタで刷ってワゴンに置くだけなので、多少大きくても問題ない）
+ */
+function build(text, mode) {
   // typeNumber 0 = 収まる最小バージョンを自動選択
   const qr = qrcodeGenerator(0, EC_LEVEL);
-  // 英数字モードはバイトモードより高密度に詰められる（= バージョンを低く保てる）
-  qr.addData(text, 'Alphanumeric');
+  qr.addData(text, mode);
   qr.make();
   return qr;
 }
 
 /** QRを true/false の二次元配列（余白込み）にする */
-export function toMatrix(text) {
-  const qr = build(text);
+export function toMatrix(text, mode = 'Alphanumeric') {
+  const qr = build(text, mode);
   const n = qr.getModuleCount();
   const size = n + QUIET_ZONE * 2;
   const rows = [];
@@ -46,8 +54,8 @@ export function toMatrix(text) {
  * 黒マスを1本のパスにまとめている。プリンタドライバによっては
  * 矩形を大量に並べると隣接マスの間に白い筋が出ることがあるため。
  */
-export function toSvg(text, { sizeMm = 55 } = {}) {
-  const { rows, size } = toMatrix(text);
+export function toSvg(text, { sizeMm = 55, mode = 'Alphanumeric' } = {}) {
+  const { rows, size } = toMatrix(text, mode);
   let d = '';
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
@@ -96,8 +104,8 @@ function chunk(type, data) {
 }
 
 /** 目標ピクセル数に近づくよう、1マスあたりの整数倍率を選ぶ（非整数だとマスが歪む） */
-export function toPng(text, { targetPx = 900 } = {}) {
-  const { rows, size } = toMatrix(text);
+export function toPng(text, { targetPx = 900, mode = 'Alphanumeric' } = {}) {
+  const { rows, size } = toMatrix(text, mode);
   const scale = Math.max(1, Math.round(targetPx / size));
   const dim = size * scale;
 
