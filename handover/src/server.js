@@ -124,6 +124,30 @@ function listener(opts) {
 /* ------------------------------------------------------------------ *
  * 起動
  * ------------------------------------------------------------------ */
+/**
+ * HTTPS用の証明書を読む。
+ * Windowsは PowerShell が PFX 形式でしか書き出せないので、両方に対応しておく。
+ * 見つからなければ null（HTTPは動かし続ける）。
+ */
+function loadCertificate() {
+  const pfx = resolve(CERT_DIR, 'server.pfx');
+  const pass = resolve(CERT_DIR, 'server.pfx.pass');
+  if (existsSync(pfx)) {
+    return {
+      pfx: readFileSync(pfx),
+      passphrase: existsSync(pass) ? readFileSync(pass, 'utf8').trim() : undefined,
+    };
+  }
+
+  const key = resolve(CERT_DIR, 'server.key');
+  const crt = resolve(CERT_DIR, 'server.crt');
+  if (existsSync(key) && existsSync(crt)) {
+    return { key: readFileSync(key), cert: readFileSync(crt) };
+  }
+
+  return null;
+}
+
 function lanAddresses() {
   return Object.values(networkInterfaces())
     .flat()
@@ -136,9 +160,7 @@ function start() {
   store.purgeExpiredSessions();
   setInterval(() => store.purgeExpiredSessions(), 6 * 3600_000).unref();
 
-  const keyPath = resolve(CERT_DIR, 'server.key');
-  const crtPath = resolve(CERT_DIR, 'server.crt');
-  const hasCert = existsSync(keyPath) && existsSync(crtPath);
+  const creds = loadCertificate();
   const addrs = lanAddresses();
 
   createHttpServer(listener({ https: false })).listen(HTTP_PORT, '0.0.0.0', () => {
@@ -146,8 +168,7 @@ function start() {
     for (const a of addrs) console.log(`        http://${a}:${HTTP_PORT}`);
   });
 
-  if (hasCert) {
-    const creds = { key: readFileSync(keyPath), cert: readFileSync(crtPath) };
+  if (creds) {
     createHttpsServer(creds, listener({ https: true })).listen(HTTPS_PORT, '0.0.0.0', () => {
       console.log(`HTTPS : https://localhost:${HTTPS_PORT}`);
       for (const a of addrs) console.log(`        https://${a}:${HTTPS_PORT}   ← スマホはこちら`);

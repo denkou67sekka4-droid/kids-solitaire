@@ -12,12 +12,16 @@ set -euo pipefail
 CERT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/certs"
 mkdir -p "$CERT_DIR"
 
-# このマシンが持っているIPv4アドレスを全部集める
-IPS=$(
-  { ip -4 addr show 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' \
-    || ifconfig 2>/dev/null | grep -oE 'inet (addr:)?([0-9]+\.){3}[0-9]+' | grep -oE '([0-9]+\.){3}[0-9]+'; } \
-  | sort -u
-)
+# このマシンが持っているIPv4アドレスを集める。
+# ip / ifconfig は環境によって無いので、アプリの動作に必須な node から取る。
+# こうしておくと、サーバ起動時に表示されるURLと証明書の中身が必ず一致する。
+IPS=$(node -e '
+  const nets = require("node:os").networkInterfaces();
+  const addrs = Object.values(nets).flat()
+    .filter((n) => n && n.family === "IPv4" && !n.internal)
+    .map((n) => n.address);
+  console.log([...new Set(addrs)].join("\n"));
+' 2>/dev/null || true)
 
 ALT="DNS:localhost,IP:127.0.0.1"
 for ip in $IPS; do

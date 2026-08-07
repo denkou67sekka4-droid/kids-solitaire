@@ -15,10 +15,8 @@
     "test": "node --no-warnings --test \"test/*.test.js\"",
     "smoke": "node --no-warnings scripts/smoke.mjs"
   },
-  "dependencies": {
-    "jsqr": "^1.4.0",
-    "qrcode-generator": "^2.0.4"
-  },
+  "//": "実行に必要な依存はありません。QRの生成・読取ライブラリ(MIT)は同梱してあるので、npm install なしで起動できます。",
+  "dependencies": {},
   "devDependencies": {
     "playwright": "^1.62.1"
   }

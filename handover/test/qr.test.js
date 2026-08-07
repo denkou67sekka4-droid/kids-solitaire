@@ -1,12 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
-import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import vm from 'node:vm';
 
 import { toMatrix, toPng, toSvg } from '../src/qr.js';
 import { generateToken } from '../src/token.js';
 
-const jsQR = createRequire(import.meta.url)('jsqr').default ?? createRequire(import.meta.url)('jsqr');
+/**
+ * 読み取り側の検証には、ブラウザへ配信しているのと同じ jsQR をそのまま使う。
+ * ブラウザ向けのUMDなので、`self` を用意した文脈で評価して取り出す。
+ * （このプロジェクトは type:module なので require では読めない）
+ */
+const jsQR = (() => {
+  const path = resolve(fileURLToPath(import.meta.url), '..', '..', 'public/js/vendor/jsQR.js');
+  const sandbox = { self: {} };
+  vm.runInNewContext(readFileSync(path, 'utf8'), sandbox);
+  return sandbox.self.jsQR;
+})();
 
 /** 生成したPNGを読み直して RGBA にする（グレースケール8bit・フィルタ0前提） */
 function decodePng(buf) {

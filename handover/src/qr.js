@@ -1,5 +1,6 @@
 import { deflateSync } from 'node:zlib';
-import qrcodeGenerator from 'qrcode-generator';
+// npm install なしで動かせるよう同梱している（MIT / Kazuhiko Arase 氏）
+import qrcodeGenerator from './vendor/qrcode-generator.mjs';
 
 /**
  * QRコードの生成。
