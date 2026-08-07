@@ -53,6 +53,12 @@ const pad = new SignaturePad(document.getElementById('signCanvas'), {
 document.getElementById('clearBtn').addEventListener('click', () => pad.clear());
 document.getElementById('undoBtn').addEventListener('click', () => pad.undo());
 document.getElementById('backToScanBtn').addEventListener('click', () => setPhase('packages'));
+document.getElementById('receiverRelation').addEventListener('change', () => {
+  syncReceiverFields();
+  if (document.getElementById('receiverRelation').value === 'agent') {
+    document.getElementById('receiverName').focus();
+  }
+});
 document.getElementById('againBtn').addEventListener('click', reset);
 el.restartBtn.addEventListener('click', reset);
 
@@ -115,15 +121,49 @@ function renderSignStage() {
        </div>`
     : '';
 
+  syncReceiverFields();
+}
+
+/**
+ * サインするのは「実際に引き取りに来た人」であって、伝票上のお客様とは限らない。
+ * ご本人ならお名前を先に入れておくが、代理の方に切り替えたら必ず入力し直させる。
+ * （初期値のまま確定されると、来ていない人の名前で受領記録が残ってしまう）
+ */
+function syncReceiverFields() {
+  const h = state.handover;
+  if (!h) return;
+
+  const relation = document.getElementById('receiverRelation').value;
   const nameInput = document.getElementById('receiverName');
-  if (!nameInput.value) nameInput.value = h.customer_name;
+  const hint = document.getElementById('receiverHint');
+  const prompt = document.getElementById('signPrompt');
+
+  if (relation === 'agent') {
+    if (nameInput.value === h.customer_name) nameInput.value = '';
+    nameInput.placeholder = '例）山田運送 佐藤';
+    hint.textContent = `お客様（${h.customer_name} 様）に代わって引き取りに来られた方のお名前を入力してください。`;
+    prompt.textContent = '代理でお引取りの方';
+  } else {
+    if (!nameInput.value) nameInput.value = h.customer_name;
+    nameInput.placeholder = '';
+    hint.textContent = '';
+    prompt.textContent = '引き取られるご本人';
+  }
+}
+
+/** 受領者の入力欄を空に戻す。お客様が変わるたびに必ず通す。 */
+function clearReceiveForm() {
+  document.getElementById('receiverName').value = '';
+  document.getElementById('receiverRelation').value = 'self';
+  document.getElementById('receiveNote').value = '';
+  pad.clear();
 }
 
 function reset() {
   state.handover = null;
   state.packages = [];
   state.scanned = new Set();
-  pad.clear();
+  clearReceiveForm();
   el.alert.innerHTML = '';
   el.manualInput.value = '';
   el.scanner.classList.remove('found', 'mismatch');
@@ -330,6 +370,9 @@ function acceptCustomer({ kind, handover, packages, package: pkg }) {
   state.packages = packages;
   state.scanned = new Set();
   overrideReason = '';
+
+  // 前のお客様の入力が残っていると、別人の名前で受領記録が残ってしまう
+  clearReceiveForm();
 
   el.alert.innerHTML = '';
   if (isOverdue(handover)) {

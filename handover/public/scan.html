@@ -58,18 +58,19 @@
 
       <form id="receiveForm">
         <div class="card">
-          <h2>受領者の確認</h2>
+          <h2>引き取られる方の確認</h2>
           <div class="grid">
             <div>
-              <label for="receiverName">受領者のお名前 <span class="req" aria-hidden="true">*</span></label>
-              <input id="receiverName" name="receiverName" required maxlength="100" autocomplete="off">
-            </div>
-            <div>
-              <label for="receiverRelation">続柄</label>
+              <label for="receiverRelation">お引取りの方</label>
               <select id="receiverRelation" name="receiverRelation">
                 <option value="self">ご本人</option>
                 <option value="agent">代理の方</option>
               </select>
+            </div>
+            <div>
+              <label for="receiverName">引き取られる方のお名前 <span class="req" aria-hidden="true">*</span></label>
+              <input id="receiverName" name="receiverName" required maxlength="100" autocomplete="off">
+              <p class="hint" id="receiverHint"></p>
             </div>
             <div class="full">
               <label for="receiveNote">引渡時の備考</label>
@@ -81,7 +82,9 @@
 
         <div class="card">
           <h2>受領サイン <span class="req" aria-hidden="true">*</span></h2>
-          <p class="hint" style="margin-top:-8px">画面の枠内に、指でサインをお願いします。</p>
+          <p class="hint" style="margin-top:-8px">
+            <b id="signPrompt">引き取られるご本人</b>に、画面の枠内へ指でサインをお願いします。
+          </p>
           <div class="sign-area">
             <canvas id="signCanvas" aria-label="サイン記入欄"></canvas>
             <div class="sign-baseline" aria-hidden="true"></div>

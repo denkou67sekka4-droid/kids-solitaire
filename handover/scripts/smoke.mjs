@@ -132,6 +132,27 @@ async function startServer(dbPath) {
   throw new Error('サーバが起動しませんでした');
 }
 
+/** サイン欄を指でなぞる（画面外だとマウス座標が届かないので必ず表示域に入れる） */
+async function sign(page) {
+  const canvas = page.locator('#signCanvas');
+  await canvas.scrollIntoViewIfNeeded();
+  const box = await canvas.boundingBox();
+
+  const strokes = [
+    [[0.15, 0.35], [0.30, 0.30], [0.45, 0.40], [0.30, 0.55], [0.18, 0.62], [0.34, 0.70]],
+    [[0.55, 0.28], [0.72, 0.34], [0.62, 0.52], [0.78, 0.60], [0.60, 0.72]],
+  ];
+  for (const stroke of strokes) {
+    const [sx, sy] = stroke[0];
+    await page.mouse.move(box.x + box.width * sx, box.y + box.height * sy);
+    await page.mouse.down();
+    for (const [px, py] of stroke.slice(1)) {
+      await page.mouse.move(box.x + box.width * px, box.y + box.height * py, { steps: 12 });
+    }
+    await page.mouse.up();
+  }
+}
+
 async function login(page) {
   await page.goto(`${BASE}/login`);
   await page.fill('#username', 'admin');
@@ -258,25 +279,10 @@ try {
   /* --- 5. サイン --------------------------------------------------- */
   console.log('\n[4] 画面にサインをもらう');
 
-  const canvas = page.locator('#signCanvas');
-  // 画面外だとマウス座標がキャンバスに届かないので、必ず表示域に入れてから測る
-  await canvas.scrollIntoViewIfNeeded();
-  const box = await canvas.boundingBox();
-  // 「山田」風の連続した線を指でなぞる
-  const strokes = [
-    [[0.15, 0.35], [0.30, 0.30], [0.45, 0.40], [0.30, 0.55], [0.18, 0.62], [0.34, 0.70]],
-    [[0.55, 0.28], [0.72, 0.34], [0.62, 0.52], [0.78, 0.60], [0.60, 0.72]],
-  ];
-  for (const stroke of strokes) {
-    const [sx, sy] = stroke[0];
-    await page.mouse.move(box.x + box.width * sx, box.y + box.height * sy);
-    await page.mouse.down();
-    for (const [px, py] of stroke.slice(1)) {
-      await page.mouse.move(box.x + box.width * px, box.y + box.height * py, { steps: 12 });
-    }
-    await page.mouse.up();
-  }
+  assert((await page.inputValue('#receiverName')) === '山田 太郎',
+    'ご本人の場合はお名前が先に入っている');
 
+  await sign(page);
   assert(!(await page.locator('#completeBtn').isDisabled()), 'サインを書くと［引渡しを確定する］が押せるようになった');
   await page.fill('#receiveNote', '1箱に軽微な擦れあり・お客様了承済み');
   await shot(page, 'signature');
@@ -329,8 +335,63 @@ try {
   assert(alertText.includes('鈴木 次郎'), '誰の荷物なのかが表示される');
   await shot(page, 'mismatch');
 
-  /* --- 6b. カメラが使えないとき ------------------------------------ */
-  console.log('\n[5b] カメラが使えないときに手入力へ案内できるか');
+  /* --- 6. 代理の方が引き取る場合 ---------------------------------- */
+  console.log('\n[6] 代理の方が引き取るとき');
+
+  await page.fill('#manualToken', secondData.packages[0].token);
+  await page.click('#manualForm button[type=submit]');
+  await page.waitForSelector('#signStage:not([hidden])');
+
+  assert((await page.inputValue('#receiverName')) === '佐藤 三郎',
+    '既定ではお客様ご本人の名前が入る');
+
+  await page.selectOption('#receiverRelation', 'agent');
+  assert((await page.inputValue('#receiverName')) === '',
+    '「代理の方」に切り替えるとお名前が消え、入力し直しになる');
+  assert((await page.textContent('#signPrompt')) === '代理でお引取りの方',
+    'サインをもらう相手が「代理の方」に変わる');
+  await shot(page, 'agent-pickup');
+
+  await page.fill('#receiverName', '山田運送 佐藤');
+  await sign(page);
+  await page.click('#completeBtn');
+  await page.waitForSelector('#doneView:not([hidden])');
+  assert(true, '代理の方のサインで引渡しを確定できた');
+
+  /* --- 6b. 続けて次のお客様へ（前の入力が残らないか） -------------- */
+  console.log('\n[7] 続けて次のお客様を処理する');
+
+  const third = await ctx.request.post(`${BASE}/api/handovers`, {
+    data: { customer_name: '高橋 四郎', item_count: 1 },
+    headers: { origin: BASE },
+  });
+  const thirdData = await (await ctx.request.get(`${BASE}/api/handovers/${(await third.json()).handover.id}`)).json();
+
+  // 画面を再読み込みせず、［続けて次のお客様を読み取る］から続ける
+  await page.click('#againBtn');
+  await page.waitForSelector('#scanStage:not([hidden])');
+  await page.fill('#manualToken', thirdData.handover.token);
+  await page.click('#manualForm button[type=submit]');
+  await page.waitForSelector('#scanContext .pkg-list');
+  await page.fill('#manualToken', thirdData.packages[0].token);
+  await page.click('#manualForm button[type=submit]');
+  await page.waitForSelector('#signStage:not([hidden])');
+
+  assert((await page.inputValue('#receiverName')) === '高橋 四郎',
+    '前のお客様の受領者名が持ち越されていない');
+  assert((await page.inputValue('#receiverRelation')) === 'self',
+    '続柄が「ご本人」に戻っている');
+  assert(await page.locator('#completeBtn').isDisabled(),
+    '前のサインが残っておらず、書き直しが必要になっている');
+
+  /* --- 8. カメラが使えないとき ------------------------------------- */
+  console.log('\n[8] カメラが使えないときに手入力へ案内できるか');
+
+  const spare = await ctx.request.post(`${BASE}/api/handovers`, {
+    data: { customer_name: '渡辺 五郎', item_count: 1 },
+    headers: { origin: BASE },
+  });
+  const spareToken = (await spare.json()).handover.token;
 
   // HTTPS未設定・権限拒否のときと同じ状態を作る
   const noCam = await ctx.newPage();
@@ -347,7 +408,7 @@ try {
   assert(camMsg.includes('カメラの使用が許可されていません'), 'カメラが使えない理由が画面に出る');
 
   // この状態でも運用できることが大事
-  await noCam.fill('#manualToken', secondData.handover.token);
+  await noCam.fill('#manualToken', spareToken);
   await noCam.click('#manualForm button[type=submit]');
   await noCam.waitForSelector('#scanContext .pkg-list');
   assert(true, 'カメラなしでも手入力で引渡し作業を続けられる');
@@ -355,7 +416,7 @@ try {
   await noCam.close();
 
   /* --- 7. 事務PCで履歴を確認 -------------------------------------- */
-  console.log('\n[6] 事務PCで履歴とサインを確認する');
+  console.log('\n[9] 事務PCで履歴とサインを確認する');
 
   const deskCtx = await browser.newContext({ viewport: { width: 1280, height: 1000 }, locale: 'ja-JP' });
   deskCtx.on('weberror', (e) => errors.push({ url: e.page().url(), stack: e.error()?.stack ?? String(e.error()) }));
