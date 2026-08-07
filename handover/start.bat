@@ -20,9 +20,16 @@ set "PORT=8080"
 set "HTTPS_PORT=8443"
 rem ------------------------------------------------
 
+rem Node.js を探す。展開したフォルダ名のまま置かれることが多いので、
+rem node-v22.20.0-win-x64 のような名前でも拾えるようにしてある。
 set "NODE_EXE="
 if exist "node\node.exe" set "NODE_EXE=node\node.exe"
 if not defined NODE_EXE if exist "node\bin\node.exe" set "NODE_EXE=node\bin\node.exe"
+if not defined NODE_EXE (
+  for /d %%d in ("node-v*") do (
+    if exist "%%d\node.exe" set "NODE_EXE=%%d\node.exe"
+  )
+)
 if not defined NODE_EXE (
   where node >nul 2>nul
   if not errorlevel 1 set "NODE_EXE=node"
@@ -32,13 +39,8 @@ if not defined NODE_EXE (
   echo.
   echo   Node.js が見つかりませんでした。
   echo.
-  echo   https://nodejs.org/ja/download から
-  echo   「Windows Binary (.zip)」を落として展開し、
-  echo   中身をこのフォルダの node\ に置いてください。
-  echo.
-  echo     %~dp0node\node.exe
-  echo.
-  echo   ↑ この場所に node.exe があればOKです。
+  echo   このフォルダにある  setup.bat  をダブルクリックしてください。
+  echo   必要なものを自動で用意します（3分ほど）。
   echo.
   pause
   exit /b 1

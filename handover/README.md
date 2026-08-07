@@ -72,13 +72,30 @@ QRは2種類あります。
 
 ### Windows（事務PCで動かす場合）
 
-1. [nodejs.org](https://nodejs.org/ja/download) から **「Windows Binary (.zip)」** を落とす
-   （インストーラ版ではなくzip版。管理者権限は要りません）
-2. 展開した中身を `handover\node\` に置く（`handover\node\node.exe` になるように）
-3. **`start.bat` をダブルクリック**
+1. **`setup.bat` をダブルクリック**
+   必要なもの（Node.js）を自動で用意します。3分ほどかかります。
+   インストーラは使わないので、管理者権限もPCの設定変更も要りません。
+2. **`start.bat` をダブルクリック**
 
 黒い画面が出たらサーバが動いています。閉じると止まります。
-会社名やポートを変えたいときは `start.bat` を右クリック →［編集］で先頭部分を書き換えてください。
+初回だけ管理者パスワードが表示されるので控えてください。
+
+会社名やポートを変えたいときは `start.bat` を右クリック →［編集］で先頭部分を書き換えます。
+
+<details>
+<summary>社内ネットワークの制限で <code>setup.bat</code> が失敗する場合</summary>
+
+手作業でも用意できます。
+
+1. [nodejs.org](https://nodejs.org/ja/download) を開き、**「Windows Binary (.zip)」** を落とす
+   （インストーラ版ではなく **zip版**）
+2. 落とした zip を右クリック →［すべて展開］
+3. 出てきた `node-v22.x.x-win-x64` フォルダを、`handover` フォルダの中に移動する
+
+フォルダ名はそのままで構いません（`start.bat` が探します）。
+`handover\node-v22.20.0-win-x64\node.exe` のような場所にあればOKです。
+
+</details>
 
 ### macOS / Linux
 
@@ -264,8 +281,10 @@ npm run smoke -- --headed    # ブラウザを表示して確認する
 ## 構成
 
 ```
+setup.bat      Windows用の初回準備（ダブルクリック）
 start.bat      Windows用の起動（ダブルクリック）
 scripts/
+  setup-node.ps1 Node.js を自動で用意する
   autostart.ps1  PC起動時の自動起動を登録（Windows）
   make-cert.ps1  HTTPS証明書を作る（Windows）
   make-cert.sh   HTTPS証明書を作る（macOS / Linux）
