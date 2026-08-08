@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node --no-warnings src/server.js",
     "dev": "node --no-warnings --watch src/server.js",
-    "cert": "bash scripts/make-cert.sh",
+    "cert": "node --no-warnings scripts/make-cert.mjs",
     "adduser": "node --no-warnings scripts/adduser.mjs",
     "backup": "node --no-warnings scripts/backup.mjs",
     "test": "node --no-warnings --test \"test/*.test.js\"",

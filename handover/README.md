@@ -183,10 +183,10 @@ npm start
 社内LANの `http://192.168.x.x:8080` では、どのブラウザでもカメラは必ず失敗します。
 そのため証明書を作ってから起動してください。**これも追加インストールは不要です。**
 
-**Windows**（PowerShell標準の機能だけで作ります。OpenSSLは要りません）
+**Windows**
 
 ```
-scripts\make-cert.ps1 を右クリック →［PowerShell で実行］
+make-cert.bat をダブルクリック
 ```
 
 **macOS / Linux**
@@ -194,6 +194,9 @@ scripts\make-cert.ps1 を右クリック →［PowerShell で実行］
 ```bash
 npm run cert
 ```
+
+OpenSSL も PowerShell も使いません。Node だけで作るので、
+どのOSでも同じ結果になり、実行ポリシーなどで詰まることもありません。
 
 どちらもこのPCのIPアドレスとコンピュータ名を自動で調べ、証明書に埋め込みます。
 作り終えたらサーバを起動しなおすとHTTPSが有効になります。
@@ -336,10 +339,12 @@ npm run smoke -- --headed    # ブラウザを表示して確認する
 ```
 setup.bat      Windows用の初回準備（ダブルクリック）
 start.bat      Windows用の起動（ダブルクリック）
+make-cert.bat  Windows用の証明書作成（ダブルクリック）
+src/
+  mkcert.js    証明書の生成（ASN.1/DERを自前で組み立てている）
 scripts/
   autostart.ps1  PC起動時の自動起動を登録（Windows）
-  make-cert.ps1  HTTPS証明書を作る（Windows）
-  make-cert.sh   HTTPS証明書を作る（macOS / Linux）
+  make-cert.mjs  HTTPS証明書を作る（Node だけで完結）
   backup.mjs     稼働中でも安全なバックアップ
   adduser.mjs    担当者アカウントの追加（コマンド版）
 src/

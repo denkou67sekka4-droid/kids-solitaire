@@ -18,7 +18,7 @@ if (!urls.length) {
       <div class="note warn">
         <strong>いまのままではカメラが使えません</strong>
         ブラウザは、HTTPSでない接続ではカメラを許可しません（このPC自身を除く）。<br>
-        <b>scripts\\make-cert.ps1</b> を右クリック →［PowerShell で実行］したあと、
+        事務PCで <b>make-cert.bat</b> をダブルクリックしたあと、
         <b>start.bat</b> を起動しなおしてください。<br>
         ※ このままでも、引渡番号を手で入力しての動作確認はできます。
       </div>`}
