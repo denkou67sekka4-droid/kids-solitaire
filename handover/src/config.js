@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { networkInterfaces } from 'node:os';
+import { hostname, networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -44,11 +44,19 @@ export function lanAddresses() {
 export function connectUrls() {
   const secure = hasCertificate();
   const ips = lanAddresses();
+  const host = hostname();
+
+  // 他のPCからは、IPよりコンピュータ名で開いてもらうほうがよい。
+  // 社内DHCPでIPが変わってもブックマークが切れないため。
+  // 証明書にもコンピュータ名を入れてあるので、HTTPSでも使える。
+  const names = host && host !== 'localhost' ? [host] : [];
+
   return {
     secure,
+    hostname: host,
     urls: ips.map((ip) => (secure ? `https://${ip}:${HTTPS_PORT}` : `http://${ip}:${HTTP_PORT}`)),
-    // 証明書を使わずにカメラを許可する方法（Chromeの設定で例外にする）を
-    // 案内するために、HTTP側のURLも渡しておく
-    httpUrls: ips.map((ip) => `http://${ip}:${HTTP_PORT}`),
+    // 証明書を使わずにカメラを許可する方法（Chromeの設定で例外にする）と、
+    // カメラを使わない他のPC向けの案内に使う
+    httpUrls: [...names, ...ips].map((h) => `http://${h}:${HTTP_PORT}`),
   };
 }

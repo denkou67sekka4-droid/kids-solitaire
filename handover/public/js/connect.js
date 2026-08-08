@@ -1,6 +1,6 @@
 import { api, esc, mountAppBar } from './app.js';
 
-await mountAppBar({ title: 'スマホをつなぐ', back: '/' });
+await mountAppBar({ title: 'スマホ・他のPCをつなぐ', back: '/' });
 
 const content = document.getElementById('content');
 const { secure, urls, httpUrls, caAvailable } = await api('/api/connect');
@@ -51,6 +51,34 @@ if (!urls.length) {
           </div>
         </div>
       </div>`).join('')}
+
+    <div class="card">
+      <h2>他の事務PCからつなぐ</h2>
+      <p style="margin-top:0">
+        他のPCは<b>ブラウザで下のアドレスを開くだけ</b>です。
+        インストール作業も、このフォルダをコピーする必要もありません。
+      </p>
+      ${httpUrls.map((u) => `<div class="url" style="font-size:19px">${esc(u)}</div>`).join('')}
+      <p class="hint">
+        ${httpUrls.length > 1
+          ? '上のコンピュータ名のほうを使ってください。社内でIPが変わってもブックマークが切れません。<br>'
+          : ''}
+        開いたら<b>ブックマークに入れて</b>おくと、次から一発で開けます。<br>
+        カメラは使わないので、証明書の準備は要りません（警告も出ません）。
+      </p>
+
+      <div class="note info" style="margin-top:14px">
+        <strong>使う人ごとにアカウントを作ってください</strong>
+        引渡票には発行した人の名前が刷り込まれ、履歴にも誰がやったかが残ります。
+        1つのアカウントを共有すると追えなくなります。<br>
+        <a href="/users">［担当者の管理］</a>から追加できます（管理者のみ）。
+      </div>
+
+      <p class="hint">
+        ※ このPC（サーバ役）を起動しておく必要があります。
+        スリープすると他のPCからつながらなくなるので、電源設定を［なし］にしてください。
+      </p>
+    </div>
 
     <div class="card">
       <h2>毎回の確認をなくす（任意）</h2>

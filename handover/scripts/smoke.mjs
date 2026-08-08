@@ -493,6 +493,8 @@ try {
 
   // 証明書の有無で案内が変わる。どちらの状態でも、次にやることが出ていること。
   const info = await (await desk.request.get(`${BASE}/api/connect`)).json();
+  assert(connText.includes('他の事務PCからつなぐ'), '他のPCからの開き方を案内する');
+  assert(/http:\/\/[^\s:]+:\d+/.test(connText), '他のPC向けのHTTPアドレスが出ている');
   assert(connText.includes('方法A'), '証明書を使わない簡単な代替手段を案内する');
   assert(connText.includes('飛ばして構いません'), '任意の作業であることを明示する');
 
