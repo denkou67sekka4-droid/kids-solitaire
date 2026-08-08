@@ -270,9 +270,15 @@ try {
 } catch (err) {
   // カメラが使えなくても、番号の手入力だけで引渡し作業は成立する。
   // 画面を止めず、理由を出したうえで手入力へ誘導する。
+  //
+  // ここで行き止まりにしないことが大事。スマホを持っているのは倉庫の人で、
+  // 事務PCの画面は見られない。対処方法へ自力でたどり着けるようにしておく。
   state.cameraError = err.message;
-  el.scannerMsg.textContent = err.message;
   el.scanner.classList.add('unavailable');
+  el.scannerMsg.innerHTML =
+    `${esc(err.message)}<br>` +
+    `<a href="/connect" style="color:#9ecbff;font-weight:700;display:inline-block;margin-top:8px">` +
+    `カメラを使えるようにする方法を見る</a>`;
   el.manualInput.focus();
 }
 
