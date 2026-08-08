@@ -3,7 +3,7 @@ import { api, esc, mountAppBar } from './app.js';
 await mountAppBar({ title: 'スマホをつなぐ', back: '/' });
 
 const content = document.getElementById('content');
-const { secure, urls, caAvailable } = await api('/api/connect');
+const { secure, urls, httpUrls, caAvailable } = await api('/api/connect');
 
 if (!urls.length) {
   content.innerHTML = `
@@ -52,35 +52,67 @@ if (!urls.length) {
         </div>
       </div>`).join('')}
 
-    ${secure && caAvailable ? `
-      <div class="card">
-        <h2>警告を消す（スマホ1台につき1回）</h2>
-        <p style="margin-top:0">
-          この作業をしておくと、<b>毎回の警告が出なくなり、カメラの許可も聞かれなくなります</b>。<br>
-          <span class="hint">
-            信用されていない証明書のままだと、Chromeはカメラの許可を覚えてくれません。
-            毎回タップするのが煩わしいので、最初にやっておくことをおすすめします。
-          </span>
-        </p>
+    <div class="card">
+      <h2>毎回の確認をなくす（任意）</h2>
+      <p style="margin-top:0">
+        このままでも使えますが、アプリを開くたびに
+        <b>証明書の警告</b>と<b>カメラの許可</b>を毎回タップすることになります。<br>
+        <span class="hint">
+          信用されていない証明書での接続では、Chromeがカメラの許可を覚えてくれないためです。
+        </span>
+      </p>
+      <p class="hint">
+        <b>急ぐ場合は飛ばして構いません。</b>タップが増えるだけで、機能は変わりません。
+      </p>
+
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-weight:700;padding:8px 0">
+          方法A：Chromeの設定だけで済ませる（かんたん・2分）
+        </summary>
         <p class="hint">
-          ※ <b>スマホ側での操作です。</b>スマホでこの画面を開いてから行ってください。
+          証明書を入れる代わりに、このアドレスだけをChromeの例外に登録します。
+          スマホの［設定］を触らずに済むぶん、こちらのほうが簡単です。
+        </p>
+        <ol class="steps-num">
+          <li>スマホのChromeで <b>chrome://flags</b> を開く（アドレス欄に直接入力）</li>
+          <li>検索欄に <b>insecure origins</b> と入力</li>
+          <li>［Insecure origins treated as secure］の入力欄に、下のアドレスを入れる</li>
+          <li>右のプルダウンを <b>Enabled</b> にする</li>
+          <li>画面下の［<b>Relaunch</b>］を押す</li>
+          <li>そのアドレスをChromeで開く（<b>https ではなく http</b> です）</li>
+        </ol>
+        ${httpUrls.map((u) => `<div class="url" style="font-size:17px">${esc(u)}</div>`).join('')}
+        <p class="hint">
+          この方法では通信が暗号化されません。社内LANの中だけで使う前提の割り切りです。
+          社外から使う予定があるときは、方法Bにしてください。
+        </p>
+      </details>
+
+      ${caAvailable ? `
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;font-weight:700;padding:8px 0">
+          方法B：証明書をスマホに入れる（3分・こちらが本筋）
+        </summary>
+        <p class="hint">
+          <b>スマホでこの画面を開いてから</b>行ってください（PCで押しても意味がありません）。
         </p>
         <ol class="steps-num">
           <li>下のボタンを押して証明書をダウンロード</li>
-          <li>スマホの［設定］→［セキュリティとプライバシー］→［その他のセキュリティ設定］</li>
-          <li>［暗号化と認証情報］→［証明書をインストール］→<b>［CA証明書］</b></li>
+          <li>スマホの［設定］を開き、<b>検索欄に「証明書」</b>と入力</li>
+          <li>［証明書をインストール］または［暗号化と認証情報］を選ぶ</li>
+          <li><b>［CA証明書］</b>を選ぶ（［VPNとアプリ］ではありません）</li>
           <li>警告画面が出たら［とにかくインストールする］</li>
           <li>ダウンロードした <b>handover-ca.crt</b> を選ぶ</li>
           <li>Chromeを開きなおす</li>
         </ol>
         <p class="hint">
-          機種によってメニューの名前が少し違います。［設定］の検索で
-          <b>「証明書」</b>と入れると見つかります。
+          メニューの名前は機種によって違います。［設定］の検索を使うのが確実です。
         </p>
         <div class="actions">
           <a class="btn primary" href="/ca.crt" download="handover-ca.crt">証明書をダウンロード</a>
         </div>
-      </div>` : ''}
+      </details>` : ''}
+    </div>
 
     <div class="card">
       <h2>つながらないとき</h2>

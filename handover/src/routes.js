@@ -310,10 +310,11 @@ route('GET', '/api/config', async (ctx) => {
  */
 route('GET', '/api/connect', async (ctx) => {
   requireUser(ctx);
-  const { secure, urls } = config.connectUrls();
+  const { secure, urls, httpUrls } = config.connectUrls();
   json(ctx.res, 200, {
     secure,
     urls,
+    httpUrls,
     httpPort: config.HTTP_PORT,
     httpsPort: config.HTTPS_PORT,
     // スマホに入れるCA証明書が用意できているか

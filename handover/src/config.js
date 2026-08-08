@@ -43,10 +43,12 @@ export function lanAddresses() {
  */
 export function connectUrls() {
   const secure = hasCertificate();
-  const scheme = secure ? 'https' : 'http';
-  const port = secure ? HTTPS_PORT : HTTP_PORT;
+  const ips = lanAddresses();
   return {
     secure,
-    urls: lanAddresses().map((ip) => `${scheme}://${ip}:${port}`),
+    urls: ips.map((ip) => (secure ? `https://${ip}:${HTTPS_PORT}` : `http://${ip}:${HTTP_PORT}`)),
+    // 証明書を使わずにカメラを許可する方法（Chromeの設定で例外にする）を
+    // 案内するために、HTTP側のURLも渡しておく
+    httpUrls: ips.map((ip) => `http://${ip}:${HTTP_PORT}`),
   };
 }

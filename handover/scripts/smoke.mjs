@@ -493,8 +493,11 @@ try {
 
   // 証明書の有無で案内が変わる。どちらの状態でも、次にやることが出ていること。
   const info = await (await desk.request.get(`${BASE}/api/connect`)).json();
+  assert(connText.includes('方法A'), '証明書を使わない簡単な代替手段を案内する');
+  assert(connText.includes('飛ばして構いません'), '任意の作業であることを明示する');
+
   if (info.secure) {
-    assert(connText.includes('警告を消す'), '証明書があるときはスマホへの導入手順を出す');
+    assert(connText.includes('方法B'), '証明書があるときは導入手順も出す');
     const ca = await desk.request.get(`${BASE}/ca.crt`);
     assert(ca.ok() && (await ca.text()).startsWith('-----BEGIN CERTIFICATE-----'),
       'スマホに入れるCA証明書をダウンロードできる');
