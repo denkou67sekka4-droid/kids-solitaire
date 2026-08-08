@@ -1,16 +1,120 @@
 @echo off
 rem ==========================================================================
-rem  è·ç‰©å¼•æ¸¡ã—ç®¡ç† â€” åˆå›žæº–å‚™
+rem  ‰×•¨ˆø“n‚µŠÇ— - ‰‰ñ€”õ
 rem
-rem  ã‚¢ãƒ—ãƒªã‚’å‹•ã‹ã™ã®ã«å¿…è¦ãª Node.js ã‚’è‡ªå‹•ã§ç”¨æ„ã—ã¾ã™ã€‚
-rem  ãƒ€ãƒ–ãƒ«ã‚¯ãƒªãƒƒã‚¯ã™ã‚‹ã ã‘ã§ã™ã€‚ç®¡ç†è€…æ¨©é™ã¯è¦ã‚Šã¾ã›ã‚“ã€‚
-rem  çµ‚ã‚ã£ãŸã‚‰ start.bat ã‚’ãƒ€ãƒ–ãƒ«ã‚¯ãƒªãƒƒã‚¯ã—ã¦ãã ã•ã„ã€‚
+rem  ƒAƒvƒŠ‚ð“®‚©‚·‚Ì‚É•K—v‚È Node.js ‚ð—pˆÓ‚µ‚Ü‚·B
+rem  ƒ_ƒuƒ‹ƒNƒŠƒbƒN‚·‚é‚¾‚¯‚Å‚·BŠÇ—ŽÒŒ ŒÀ‚Í—v‚è‚Ü‚¹‚ñB
+rem
+rem  Windows 10 ˆÈ~‚É•W€‚Å“ü‚Á‚Ä‚¢‚é curl ‚Æ tar ‚¾‚¯‚ðŽg‚¢‚Ü‚·
+rem  iPowerShell ‚ÍŽg‚¢‚Ü‚¹‚ñjB
 rem ==========================================================================
 setlocal
-chcp 65001 >nul
 cd /d "%~dp0"
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\setup-node.ps1"
+set "NODE_VER=v22.20.0"
+set "NODE_ARCH=x64"
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" set "NODE_ARCH=arm64"
+set "NODE_PKG=node-%NODE_VER%-win-%NODE_ARCH%"
+set "NODE_URL=https://nodejs.org/dist/%NODE_VER%/%NODE_PKG%.zip"
 
+echo.
+echo   ‰×•¨ˆø“n‚µŠÇ— - ‰‰ñ€”õ
+echo   ==============================
+echo.
+
+rem --- ‚·‚Å‚É—pˆÓ‚Å‚«‚Ä‚¢‚È‚¢‚©Šm”F‚·‚é -----------------------------------
+if exist "node\node.exe" (
+  echo   Node.js ‚Í—pˆÓÏ‚Ý‚Å‚·B
+  echo.
+  echo   start.bat ‚ðƒ_ƒuƒ‹ƒNƒŠƒbƒN‚·‚é‚Æ‹N“®‚µ‚Ü‚·B
+  goto :end
+)
+
+for /d %%d in ("node-v*") do (
+  if exist "%%d\node.exe" (
+    echo   Node.js ‚ðŒ©‚Â‚¯‚Ü‚µ‚½ ^(%%d^)
+    echo.
+    echo   start.bat ‚ðƒ_ƒuƒ‹ƒNƒŠƒbƒN‚·‚é‚Æ‹N“®‚µ‚Ü‚·B
+    goto :end
+  )
+)
+
+where node >nul 2>nul
+if not errorlevel 1 (
+  echo   ‚±‚ÌPC‚É‚ÍŠù‚É Node.js ‚ª“ü‚Á‚Ä‚¢‚Ü‚·B
+  echo.
+  echo   start.bat ‚ðƒ_ƒuƒ‹ƒNƒŠƒbƒN‚·‚é‚Æ‹N“®‚µ‚Ü‚·B
+  goto :end
+)
+
+rem --- •K—v‚È“¹‹ï‚ª‚ ‚é‚©Šm”F‚·‚é -----------------------------------------
+where curl >nul 2>nul
+if errorlevel 1 goto :notools
+where tar >nul 2>nul
+if errorlevel 1 goto :notools
+
+rem --- ƒ_ƒEƒ“ƒ[ƒh‚µ‚Ä“WŠJ‚·‚é -------------------------------------------
+echo   Node.js %NODE_VER% ‚ðƒ_ƒEƒ“ƒ[ƒh‚µ‚Ü‚·i–ñ30MBj
+echo   %NODE_URL%
+echo.
+
+curl -L --fail --progress-bar -o "%TEMP%\%NODE_PKG%.zip" "%NODE_URL%"
+if errorlevel 1 goto :dlfail
+
+echo.
+echo   “WŠJ‚µ‚Ä‚¢‚Ü‚·...
+
+if exist "%TEMP%\handover_node" rmdir /s /q "%TEMP%\handover_node"
+mkdir "%TEMP%\handover_node"
+tar -xf "%TEMP%\%NODE_PKG%.zip" -C "%TEMP%\handover_node"
+if errorlevel 1 goto :dlfail
+
+move "%TEMP%\handover_node\%NODE_PKG%" "node" >nul
+rmdir /s /q "%TEMP%\handover_node" 2>nul
+del "%TEMP%\%NODE_PKG%.zip" 2>nul
+
+if not exist "node\node.exe" goto :dlfail
+
+for /f "delims=" %%v in ('"node\node.exe" --version') do set "GOT=%%v"
+echo.
+echo   €”õ‚ª‚Å‚«‚Ü‚µ‚½iNode.js %GOT%j
+echo.
+echo   ŽŸ‚É‚â‚é‚±‚Æ:
+echo     start.bat ‚ðƒ_ƒuƒ‹ƒNƒŠƒbƒN‚µ‚Ä‚­‚¾‚³‚¢B
+echo     •‚¢‰æ–Ê‚ªo‚Äƒuƒ‰ƒEƒU‚ªŠJ‚¯‚Î‹N“®‚µ‚Ä‚¢‚Ü‚·B
+echo.
+echo     ‰‰ñ‚¾‚¯ŠÇ—ŽÒƒpƒXƒ[ƒh‚ª•\Ž¦‚³‚ê‚Ü‚·B
+echo     ˆê“x‚µ‚©o‚È‚¢‚Ì‚ÅA•K‚¸T‚¦‚Ä‚­‚¾‚³‚¢B
+goto :end
+
+rem --- ‚¤‚Ü‚­‚¢‚©‚È‚©‚Á‚½‚Æ‚« ---------------------------------------------
+:notools
+echo   ‚±‚Ìƒpƒ\ƒRƒ“‚É‚Í curl ‚Ü‚½‚Í tar ‚ª“ü‚Á‚Ä‚¢‚Ü‚¹‚ñB
+echo   iWindows 10 ‚ÌŒÃ‚¢”Å‚©AWindows 8 ˆÈ‘O‚Ì‰Â”\«‚ª‚ ‚è‚Ü‚·j
+echo.
+goto :manual
+
+:dlfail
+echo.
+echo   ƒ_ƒEƒ“ƒ[ƒh‚Ü‚½‚Í“WŠJ‚ÉŽ¸”s‚µ‚Ü‚µ‚½B
+echo   ŽÐ“àƒlƒbƒgƒ[ƒN‚Ì§ŒÀ‚ÅŽ~‚ß‚ç‚ê‚Ä‚¢‚é‰Â”\«‚ª‚ ‚è‚Ü‚·B
+echo.
+goto :manual
+
+:manual
+echo   „Ÿ„Ÿ Žèì‹Æ‚Å—pˆÓ‚·‚éê‡ „Ÿ„Ÿ
+echo.
+echo   1^) ƒuƒ‰ƒEƒU‚ÅŽŸ‚ÌURL‚ðŠJ‚«Aƒtƒ@ƒCƒ‹‚ð•Û‘¶‚µ‚Ä‚­‚¾‚³‚¢
+echo        %NODE_URL%
+echo.
+echo   2^) •Û‘¶‚µ‚½ zip ‚ð‰EƒNƒŠƒbƒN ¨m‚·‚×‚Ä“WŠJn
+echo.
+echo   3^) o‚Ä‚«‚½ %NODE_PKG% ƒtƒHƒ‹ƒ_‚ðA‚±‚ÌƒtƒHƒ‹ƒ_‚ÉˆÚ“®‚µ‚Ä‚­‚¾‚³‚¢
+echo        %~dp0
+echo.
+echo   ƒtƒHƒ‹ƒ_–¼‚Í‚»‚Ì‚Ü‚Ü‚Å\‚¢‚Ü‚¹‚ñB
+echo.
+
+:end
 echo.
 pause
