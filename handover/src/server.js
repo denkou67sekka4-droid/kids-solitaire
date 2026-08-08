@@ -7,6 +7,7 @@ import { HttpError, json, parseCookies, securityHeaders, send, serveStatic } fro
 import { matchRoute, SESSION_COOKIE } from './routes.js';
 import * as store from './db.js';
 import { CERT_DIR, HTTP_PORT, HTTPS_PORT, PUBLIC_DIR, lanAddresses } from './config.js';
+import { hostname } from 'node:os';
 
 /** URL のパスと、実際に返す HTML ファイル */
 const PAGES = {
@@ -158,6 +159,7 @@ function start() {
 
   const creds = loadCertificate();
   const addrs = lanAddresses();
+  const host = hostname();
 
   const http = createHttpServer(listener({ https: false }));
 
@@ -177,6 +179,11 @@ function start() {
 
   http.listen(HTTP_PORT, '0.0.0.0', () => {
     console.log(`HTTP  : http://localhost:${HTTP_PORT}`);
+    // 他のPCからはコンピュータ名で開いてもらうほうがよい。
+    // 社内DHCPでIPが変わってもブックマークが切れないため、先に出す。
+    if (host && host !== 'localhost') {
+      console.log(`        http://${host}:${HTTP_PORT}   ← 他のPCはこちら`);
+    }
     for (const a of addrs) console.log(`        http://${a}:${HTTP_PORT}`);
   });
 
