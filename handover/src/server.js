@@ -159,13 +159,45 @@ function start() {
   const creds = loadCertificate();
   const addrs = lanAddresses();
 
-  createHttpServer(listener({ https: false })).listen(HTTP_PORT, '0.0.0.0', () => {
+  const http = createHttpServer(listener({ https: false }));
+
+  // HTTPが塞がっていたら業務そのものが成立しないので、理由を出して終わる。
+  // 既定のまま何も言わずに落ちると、原因にたどり着けない。
+  http.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `\n[!] ポート ${HTTP_PORT} は既に使われています。\n` +
+        '    このアプリが二重に起動していないか確認してください。\n' +
+        `    別のポートを使う場合は、start.bat の PORT を書き換えてください。\n`
+      );
+      process.exit(1);
+    }
+    throw err;
+  });
+
+  http.listen(HTTP_PORT, '0.0.0.0', () => {
     console.log(`HTTP  : http://localhost:${HTTP_PORT}`);
     for (const a of addrs) console.log(`        http://${a}:${HTTP_PORT}`);
   });
 
   if (creds) {
-    createHttpsServer(creds, listener({ https: true })).listen(HTTPS_PORT, '0.0.0.0', () => {
+    const https = createHttpsServer(creds, listener({ https: true }));
+
+    // HTTPSが立たなくても、番号の手入力での運用は続けられる。
+    // ここでアプリごと落とすと、カメラが使えないどころか業務が止まる。
+    https.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(
+          `\n[!] ポート ${HTTPS_PORT} が使えないため、HTTPSを開始できませんでした。\n` +
+          '    スマホのカメラは使えませんが、他の機能はこのまま使えます。\n' +
+          '    start.bat の HTTPS_PORT を空いている番号に変えると解消します。\n'
+        );
+        return;
+      }
+      console.error('[HTTPS]', err);
+    });
+
+    https.listen(HTTPS_PORT, '0.0.0.0', () => {
       console.log(`HTTPS : https://localhost:${HTTPS_PORT}`);
       for (const a of addrs) console.log(`        https://${a}:${HTTPS_PORT}   ← スマホはこちら`);
     });

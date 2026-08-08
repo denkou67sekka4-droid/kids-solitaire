@@ -18,13 +18,15 @@ import { fileURLToPath } from 'node:url';
 
 import { toPng } from '../src/qr.js';
 import { generateToken } from '../src/token.js';
+import { freePort } from './helpers.mjs';
 
 /** 形式は正しいが、どこにも登録されていない番号 */
 const unregisteredToken = () => generateToken();
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..');
-const PORT = 19500 + Math.floor(Math.random() * 400);
-const BASE = `http://127.0.0.1:${PORT}`;
+let PORT;
+let HTTPS_PORT;
+let BASE;
 const PASSWORD = 'self-test-1234';
 const PUBLIC_URL = 'https://handover.example.co.jp';
 
@@ -86,12 +88,16 @@ async function newHandover(extra = {}) {
 }
 
 before(async () => {
+  PORT = await freePort();
+  HTTPS_PORT = await freePort();
+  BASE = `http://127.0.0.1:${PORT}`;
   tmp = mkdtempSync(join(tmpdir(), 'handover-self-'));
   server = spawn(process.execPath, ['--no-warnings', 'src/server.js'], {
     cwd: ROOT,
     env: {
       ...process.env,
       PORT: String(PORT),
+      HTTPS_PORT: String(HTTPS_PORT),
       HANDOVER_DB: join(tmp, 's.db'),
       HANDOVER_ADMIN_PASSWORD: PASSWORD,
       HANDOVER_PUBLIC_URL: PUBLIC_URL,
@@ -270,12 +276,15 @@ test('セルフ受取用のQRにはお客様がアクセスできるURLが入る
 });
 
 test('設定より少ない情報しか無いときはQRを作らない', async () => {
+  const barePort = await freePort();
+  const bareHttpsPort = await freePort();
   // HANDOVER_PUBLIC_URL 未設定のサーバでは409を返して気づけるようにする
   const bare = spawn(process.execPath, ['--no-warnings', 'src/server.js'], {
     cwd: ROOT,
     env: {
       ...process.env,
-      PORT: String(PORT + 1),
+      PORT: String(barePort),
+      HTTPS_PORT: String(bareHttpsPort),
       HANDOVER_DB: join(tmp, 'bare.db'),
       HANDOVER_ADMIN_PASSWORD: PASSWORD,
       HANDOVER_PUBLIC_URL: '',
@@ -284,7 +293,7 @@ test('設定より少ない情報しか無いときはQRを作らない', async 
   });
 
   try {
-    const bareBase = `http://127.0.0.1:${PORT + 1}`;
+    const bareBase = `http://127.0.0.1:${barePort}`;
     for (let i = 0; i < 100; i++) {
       try {
         await fetch(`${bareBase}/login`);

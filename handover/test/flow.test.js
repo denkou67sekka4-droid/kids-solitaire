@@ -7,10 +7,12 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { toPng } from '../src/qr.js';
+import { freePort } from './helpers.mjs';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..');
-const PORT = 18000 + Math.floor(Math.random() * 2000);
-const BASE = `http://127.0.0.1:${PORT}`;
+let PORT;
+let HTTPS_PORT;
+let BASE;
 const PASSWORD = 'test-password-1234';
 
 let server;
@@ -39,6 +41,9 @@ async function call(path, { method = 'GET', body, raw = false } = {}) {
 }
 
 before(async () => {
+  PORT = await freePort();
+  HTTPS_PORT = await freePort();
+  BASE = `http://127.0.0.1:${PORT}`;
   tmp = mkdtempSync(join(tmpdir(), 'handover-test-'));
 
   server = spawn(process.execPath, ['--no-warnings', 'src/server.js'], {
@@ -46,6 +51,7 @@ before(async () => {
     env: {
       ...process.env,
       PORT: String(PORT),
+      HTTPS_PORT: String(HTTPS_PORT),
       HANDOVER_DB: join(tmp, 'test.db'),
       HANDOVER_ADMIN_PASSWORD: PASSWORD,
       HANDOVER_ORG_NAME: 'テスト株式会社',
@@ -506,6 +512,32 @@ test('スマホから開くためのURLとQRを出せる', async () => {
   }
 
   assert.equal((await call('/qr/connect.svg?i=999', { raw: true })).status, 404);
+});
+
+test('CA証明書は用意されていなければ404を返す', async () => {
+  // このテスト環境には証明書を作っていないので、その旨が分かる応答になること
+  const info = await call('/api/connect');
+  const res = await call('/ca.crt', { raw: true });
+
+  if (info.body.caAvailable) {
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /^-----BEGIN CERTIFICATE-----/);
+  } else {
+    assert.equal(res.status, 404);
+    assert.match((await res.json()).error, /make-cert/);
+  }
+});
+
+test('CA証明書はログインしないと取れない', async () => {
+  assert.equal((await fetch(`${BASE}/ca.crt`)).status, 401);
+});
+
+test('秘密鍵は配信されない', async () => {
+  // ca.key / server.key が外から取れてしまうと、なりすましが可能になる
+  for (const p of ['/ca.key', '/certs/ca.key', '/certs/server.key', '/server.key']) {
+    const res = await call(p, { raw: true });
+    assert.ok(res.status >= 400, `${p} が取得できてしまう (${res.status})`);
+  }
 });
 
 test('スマホ用のURLはログインしないと見られない', async () => {

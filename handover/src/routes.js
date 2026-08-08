@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { HttpError, json, readJson, redirect, send, setCookie } from './http.js';
 import { normalizeToken } from './token.js';
 import { toPng, toSvg } from './qr.js';
@@ -308,7 +311,31 @@ route('GET', '/api/config', async (ctx) => {
 route('GET', '/api/connect', async (ctx) => {
   requireUser(ctx);
   const { secure, urls } = config.connectUrls();
-  json(ctx.res, 200, { secure, urls, httpPort: config.HTTP_PORT, httpsPort: config.HTTPS_PORT });
+  json(ctx.res, 200, {
+    secure,
+    urls,
+    httpPort: config.HTTP_PORT,
+    httpsPort: config.HTTPS_PORT,
+    // スマホに入れるCA証明書が用意できているか
+    caAvailable: existsSync(resolve(config.CERT_DIR, 'ca.crt')),
+  });
+});
+
+/**
+ * スマホに入れてもらう社内CA証明書。
+ * 公開鍵だけなので配っても危険はない（秘密鍵の ca.key は絶対に出さない）。
+ * これを入れると証明書の警告が消え、カメラの許可も毎回聞かれなくなる。
+ */
+route('GET', '/ca.crt', async (ctx) => {
+  requireUser(ctx);
+  const path = resolve(config.CERT_DIR, 'ca.crt');
+  if (!existsSync(path)) {
+    throw new HttpError(404, '証明書がまだ作られていません（make-cert を実行してください）');
+  }
+  send(ctx.res, 200, 'application/x-x509-ca-cert', readFileSync(path), {
+    'content-disposition': 'attachment; filename="handover-ca.crt"',
+    'cache-control': 'no-store',
+  });
 });
 
 route('GET', '/qr/connect.svg', async (ctx) => {

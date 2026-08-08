@@ -3,7 +3,7 @@ import { api, esc, mountAppBar } from './app.js';
 await mountAppBar({ title: 'スマホをつなぐ', back: '/' });
 
 const content = document.getElementById('content');
-const { secure, urls, httpsPort } = await api('/api/connect');
+const { secure, urls, caAvailable } = await api('/api/connect');
 
 if (!urls.length) {
   content.innerHTML = `
@@ -51,6 +51,36 @@ if (!urls.length) {
           </div>
         </div>
       </div>`).join('')}
+
+    ${secure && caAvailable ? `
+      <div class="card">
+        <h2>警告を消す（スマホ1台につき1回）</h2>
+        <p style="margin-top:0">
+          この作業をしておくと、<b>毎回の警告が出なくなり、カメラの許可も聞かれなくなります</b>。<br>
+          <span class="hint">
+            信用されていない証明書のままだと、Chromeはカメラの許可を覚えてくれません。
+            毎回タップするのが煩わしいので、最初にやっておくことをおすすめします。
+          </span>
+        </p>
+        <p class="hint">
+          ※ <b>スマホ側での操作です。</b>スマホでこの画面を開いてから行ってください。
+        </p>
+        <ol class="steps-num">
+          <li>下のボタンを押して証明書をダウンロード</li>
+          <li>スマホの［設定］→［セキュリティとプライバシー］→［その他のセキュリティ設定］</li>
+          <li>［暗号化と認証情報］→［証明書をインストール］→<b>［CA証明書］</b></li>
+          <li>警告画面が出たら［とにかくインストールする］</li>
+          <li>ダウンロードした <b>handover-ca.crt</b> を選ぶ</li>
+          <li>Chromeを開きなおす</li>
+        </ol>
+        <p class="hint">
+          機種によってメニューの名前が少し違います。［設定］の検索で
+          <b>「証明書」</b>と入れると見つかります。
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="/ca.crt" download="handover-ca.crt">証明書をダウンロード</a>
+        </div>
+      </div>` : ''}
 
     <div class="card">
       <h2>つながらないとき</h2>

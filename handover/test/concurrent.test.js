@@ -15,10 +15,12 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { toPng } from '../src/qr.js';
+import { freePort } from './helpers.mjs';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..');
-const PORT = 18500 + Math.floor(Math.random() * 500);
-const BASE = `http://127.0.0.1:${PORT}`;
+let PORT;
+let HTTPS_PORT;
+let BASE;
 const PASSWORD = 'concurrent-test-1234';
 const DESKS = 9; // 事務のPC台数
 
@@ -50,10 +52,14 @@ async function openSession() {
 const signature = () => `data:image/png;base64,${toPng('TEST-SIGN-DATA', { targetPx: 300 }).toString('base64')}`;
 
 before(async () => {
+  PORT = await freePort();
+  HTTPS_PORT = await freePort();
+  BASE = `http://127.0.0.1:${PORT}`;
   tmp = mkdtempSync(join(tmpdir(), 'handover-conc-'));
   server = spawn(process.execPath, ['--no-warnings', 'src/server.js'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(PORT), HANDOVER_DB: join(tmp, 'c.db'), HANDOVER_ADMIN_PASSWORD: PASSWORD },
+    env: { ...process.env, PORT: String(PORT),
+      HTTPS_PORT: String(HTTPS_PORT), HANDOVER_DB: join(tmp, 'c.db'), HANDOVER_ADMIN_PASSWORD: PASSWORD },
     stdio: ['ignore', 'ignore', 'inherit'],
   });
   for (let i = 0; i < 100; i++) {

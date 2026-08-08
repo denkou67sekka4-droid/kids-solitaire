@@ -114,6 +114,8 @@ async function startServer(dbPath) {
     env: {
       ...process.env,
       PORT: String(PORT),
+      // 証明書がある環境では既定の8443を掴みにいくので、こちらもずらしておく
+      HTTPS_PORT: String(PORT + 1),
       HANDOVER_DB: dbPath,
       HANDOVER_ADMIN_PASSWORD: PASSWORD,
       HANDOVER_ORG_NAME: 'スモークテスト運輸株式会社',
@@ -488,7 +490,17 @@ try {
   await desk.waitForSelector('#content[aria-busy=false]');
   const connText = await desk.textContent('#content');
   assert(connText.includes('同じWi-Fi'), 'スマホの接続手順が出る');
-  assert(connText.includes('カメラが使えません'), '証明書が無いときはカメラが使えない旨を出す');
+
+  // 証明書の有無で案内が変わる。どちらの状態でも、次にやることが出ていること。
+  const info = await (await desk.request.get(`${BASE}/api/connect`)).json();
+  if (info.secure) {
+    assert(connText.includes('警告を消す'), '証明書があるときはスマホへの導入手順を出す');
+    const ca = await desk.request.get(`${BASE}/ca.crt`);
+    assert(ca.ok() && (await ca.text()).startsWith('-----BEGIN CERTIFICATE-----'),
+      'スマホに入れるCA証明書をダウンロードできる');
+  } else {
+    assert(connText.includes('カメラが使えません'), '証明書が無いときはカメラが使えない旨を出す');
+  }
 
   const connQr = desk.locator('.conn img').first();
   if (await connQr.count()) {

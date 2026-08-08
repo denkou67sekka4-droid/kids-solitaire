@@ -11,10 +11,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { freePort } from './helpers.mjs';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..');
-const PORT = 19000 + Math.floor(Math.random() * 500);
-const BASE = `http://127.0.0.1:${PORT}`;
+let PORT;
+let HTTPS_PORT;
+let BASE;
 const ADMIN_PW = 'admin-password-1234';
 
 let server;
@@ -44,10 +46,14 @@ const login = (call, username, password) =>
 let admin;
 
 before(async () => {
+  PORT = await freePort();
+  HTTPS_PORT = await freePort();
+  BASE = `http://127.0.0.1:${PORT}`;
   tmp = mkdtempSync(join(tmpdir(), 'handover-users-'));
   server = spawn(process.execPath, ['--no-warnings', 'src/server.js'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(PORT), HANDOVER_DB: join(tmp, 'u.db'), HANDOVER_ADMIN_PASSWORD: ADMIN_PW },
+    env: { ...process.env, PORT: String(PORT),
+      HTTPS_PORT: String(HTTPS_PORT), HANDOVER_DB: join(tmp, 'u.db'), HANDOVER_ADMIN_PASSWORD: ADMIN_PW },
     stdio: ['ignore', 'ignore', 'inherit'],
   });
   for (let i = 0; i < 100; i++) {
