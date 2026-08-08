@@ -2,6 +2,7 @@ import { HttpError, json, readJson, redirect, send, setCookie } from './http.js'
 import { normalizeToken } from './token.js';
 import { toPng, toSvg } from './qr.js';
 import * as store from './db.js';
+import * as config from './config.js';
 
 const SESSION_COOKIE = 'handover_session';
 const SESSION_DAYS = 7;
@@ -292,11 +293,33 @@ route(
 route('GET', '/api/config', async (ctx) => {
   requireUser(ctx);
   json(ctx.res, 200, {
-    org: process.env.HANDOVER_ORG_NAME || '荷物引渡し窓口',
+    org: config.orgName(),
     // 時間外セルフ受取のQRに入れるアドレス。
     // お客様の端末（社外・モバイル回線）から届く必要があるので、
     // 社内LANのアドレスではなく外から見えるURLを設定する。
-    publicUrl: (process.env.HANDOVER_PUBLIC_URL ?? '').replace(/\/+$/, ''),
+    publicUrl: config.publicUrl(),
+  });
+});
+
+/**
+ * 社内の端末（スマホ・他のPC）からこのサーバを開くためのURL。
+ * 長いアドレスを手で打たせるとまず間違えるので、画面にQRで出して読ませる。
+ */
+route('GET', '/api/connect', async (ctx) => {
+  requireUser(ctx);
+  const { secure, urls } = config.connectUrls();
+  json(ctx.res, 200, { secure, urls, httpPort: config.HTTP_PORT, httpsPort: config.HTTPS_PORT });
+});
+
+route('GET', '/qr/connect.svg', async (ctx) => {
+  requireUser(ctx);
+  const { urls } = config.connectUrls();
+  const i = Number(ctx.url.searchParams.get('i')) || 0;
+  if (!urls[i]) throw new HttpError(404, 'このアドレスは見つかりません');
+
+  const mm = Math.min(Math.max(Number(ctx.url.searchParams.get('mm')) || 45, 20), 200);
+  send(ctx.res, 200, 'image/svg+xml', toSvg(urls[i], { sizeMm: mm, mode: 'Byte' }), {
+    'cache-control': 'no-store',
   });
 });
 
@@ -490,7 +513,7 @@ route('GET', '/qr/r/:token.svg', async (ctx) => {
   const token = normalizeToken(ctx.params.token);
   if (!token) throw new HttpError(400, '引渡番号が不正です');
 
-  const base = (process.env.HANDOVER_PUBLIC_URL ?? '').replace(/\/+$/, '');
+  const base = config.publicUrl();
   if (!base) {
     throw new HttpError(409, 'お客様がアクセスできるURL（HANDOVER_PUBLIC_URL）が設定されていません');
   }
@@ -662,10 +685,7 @@ route(
     const h = store.getHandoverByToken(token);
     if (!h) throw new HttpError(404, 'お手続きの情報が見つかりません。窓口にお問い合わせください。');
 
-    json(ctx.res, 200, {
-      handover: publicHandover(h),
-      org: process.env.HANDOVER_ORG_NAME || '荷物引渡し窓口',
-    });
+    json(ctx.res, 200, { handover: publicHandover(h), org: config.orgName() });
   },
   { auth: false }
 );

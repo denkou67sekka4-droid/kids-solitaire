@@ -1,20 +1,12 @@
 import { createServer as createHttpServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
 import { readFileSync, existsSync } from 'node:fs';
-import { networkInterfaces } from 'node:os';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import { HttpError, json, parseCookies, securityHeaders, send, serveStatic } from './http.js';
 import { matchRoute, SESSION_COOKIE } from './routes.js';
 import * as store from './db.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PUBLIC_DIR = resolve(__dirname, '..', 'public');
-const CERT_DIR = resolve(__dirname, '..', 'certs');
-
-const HTTP_PORT = Number(process.env.PORT) || 8080;
-const HTTPS_PORT = Number(process.env.HTTPS_PORT) || 8443;
+import { CERT_DIR, HTTP_PORT, HTTPS_PORT, PUBLIC_DIR, lanAddresses } from './config.js';
 
 /** URL のパスと、実際に返す HTML ファイル */
 const PAGES = {
@@ -28,6 +20,7 @@ const PAGES = {
   '/list': 'list.html',
   '/detail': 'detail.html',
   '/users': 'users.html',
+  '/connect': 'connect.html',
 };
 const PUBLIC_PAGES = new Set(['/login']);
 
@@ -156,13 +149,6 @@ function loadCertificate() {
   }
 
   return null;
-}
-
-function lanAddresses() {
-  return Object.values(networkInterfaces())
-    .flat()
-    .filter((n) => n && n.family === 'IPv4' && !n.internal)
-    .map((n) => n.address);
 }
 
 function start() {

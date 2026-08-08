@@ -483,6 +483,36 @@ test('パストラバーサルでファイルを読み出せない', async () =>
   }
 });
 
+test('スマホから開くためのURLとQRを出せる', async () => {
+  const res = await call('/api/connect');
+  assert.equal(res.status, 200);
+  assert.ok(Array.isArray(res.body.urls));
+
+  // 証明書があれば https、無ければ http で案内する（無い場合は画面側で
+  // カメラが使えない旨を出す）。どちらでもURLの形は揃っていること。
+  const scheme = res.body.secure ? 'https' : 'http';
+  const port = res.body.secure ? res.body.httpsPort : res.body.httpPort;
+  for (const u of res.body.urls) {
+    assert.match(u, new RegExp(`^${scheme}://\\d+\\.\\d+\\.\\d+\\.\\d+:${port}$`), `URLの形が違う: ${u}`);
+  }
+
+  if (res.body.urls.length) {
+    const qr = await call('/qr/connect.svg?i=0', { raw: true });
+    assert.equal(qr.status, 200);
+    assert.equal(qr.headers.get('content-type'), 'image/svg+xml');
+    // URLはバイトモードで入るので、引渡番号だけのQR（29マス）より大きくなる
+    const svg = await qr.text();
+    assert.ok(Number(svg.match(/viewBox="0 0 (\d+)/)[1]) > 29);
+  }
+
+  assert.equal((await call('/qr/connect.svg?i=999', { raw: true })).status, 404);
+});
+
+test('スマホ用のURLはログインしないと見られない', async () => {
+  const anon = await fetch(`${BASE}/api/connect`);
+  assert.equal(anon.status, 401, '社内のIPアドレスが誰にでも見えてしまう');
+});
+
 test('生存確認はログインなしで見られる', async () => {
   const anon = await fetch(`${BASE}/health`);
   assert.equal(anon.status, 200);

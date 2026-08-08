@@ -481,6 +481,21 @@ try {
   assert((await staff.textContent('.sheet-head .issuer')).includes('田中'),
     '引渡票に発行した担当者名が刷り込まれる');
 
+  /* --- 10b. スマホをつなぐ案内 ------------------------------------- */
+  console.log('\n[10b] スマホをつなぐ画面');
+
+  await desk.goto(`${BASE}/connect`);
+  await desk.waitForSelector('#content[aria-busy=false]');
+  const connText = await desk.textContent('#content');
+  assert(connText.includes('同じWi-Fi'), 'スマホの接続手順が出る');
+  assert(connText.includes('カメラが使えません'), '証明書が無いときはカメラが使えない旨を出す');
+
+  const connQr = desk.locator('.conn img').first();
+  if (await connQr.count()) {
+    assert(await connQr.evaluate((i) => i.complete && i.naturalWidth > 0), '接続用のQRが表示される');
+  }
+  await shot(desk, 'connect');
+
   /* --- 11. 時間外のお客様セルフ受取 -------------------------------- */
   console.log('\n[11] 時間外にお客様がご自分で受け取る');
 
