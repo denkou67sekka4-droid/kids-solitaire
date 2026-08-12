@@ -12,8 +12,13 @@ export async function api(path, { method = 'GET', body } = {}) {
     credentials: 'same-origin',
   });
 
-  // セッション切れは黙って落とさず、ログイン画面へ送る
-  if (res.status === 401 && !location.pathname.startsWith('/login')) {
+  // セッション切れは黙って落とさず、ログイン画面へ送る。
+  // ただしログイン不要で開ける画面では飛ばさない
+  // （電波チェックは、現場でセッションが切れていても使えなければ意味がない）。
+  const PUBLIC_PATHS = ['/login', '/check', '/r/'];
+  const isPublicPage = PUBLIC_PATHS.some((p) => location.pathname.startsWith(p));
+
+  if (res.status === 401 && !isPublicPage) {
     location.href = `/login?next=${encodeURIComponent(location.pathname + location.search)}`;
     throw new Error('ログインが必要です');
   }

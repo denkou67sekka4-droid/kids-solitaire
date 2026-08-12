@@ -513,6 +513,29 @@ try {
   }
   await shot(desk, 'connect');
 
+  /* --- 10c. 電波チェック ------------------------------------------- */
+  console.log('\n[10c] 引取場所の電波チェック');
+
+  // ログインしていない端末でも開けること（現場でセッションが切れていても使えるように）
+  const anonCtx = await browser.newContext({
+    viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true, locale: 'ja-JP',
+  });
+  anonCtx.on('weberror', (e) => errors.push({ url: e.page().url(), stack: e.error()?.stack ?? String(e.error()) }));
+  const anon = await anonCtx.newPage();
+
+  await anon.goto(`${BASE}/check`);
+  assert(new URL(anon.url()).pathname === '/check', 'ログインなしでも電波チェックを開ける');
+
+  // 判定が出るまで測り続ける
+  await anon.waitForSelector('.verdict.good, .verdict.weak, .verdict.bad', { timeout: 30_000 });
+  const verdict = await anon.textContent('.verdict');
+  assert(verdict.includes('良好'), `同じ機械で測っているので良好になる（実際: ${verdict.trim().split('\n')[0]}）`);
+
+  const rate = await anon.textContent('#rate');
+  assert(rate === '100%', `取りこぼしなく測れている（${rate}）`);
+  await shot(anon, 'check', { fullPage: false });
+  await anonCtx.close();
+
   /* --- 11. 時間外のお客様セルフ受取 -------------------------------- */
   console.log('\n[11] 時間外にお客様がご自分で受け取る');
 

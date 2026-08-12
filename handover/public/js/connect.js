@@ -165,6 +165,15 @@ if (!urls.length) {
         <dt>スリープ</dt>
         <dd>このPCがスリープしていると、他の端末からはつながりません。</dd>
       </dl>
+
+      <div class="note info" style="margin-top:16px">
+        <strong>引取場所で電波が届くか調べる</strong>
+        「ときどき止まる」は一度開いただけでは分かりません。
+        スマホで下の画面を開き、実際の引取場所まで持っていって30秒ほど置いてください。
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="/check">電波チェックを開く</a>
+      </div>
     </div>
 
     <div class="card">

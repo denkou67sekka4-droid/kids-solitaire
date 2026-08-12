@@ -22,8 +22,10 @@ const PAGES = {
   '/detail': 'detail.html',
   '/users': 'users.html',
   '/connect': 'connect.html',
+  '/check': 'check.html',
 };
-const PUBLIC_PAGES = new Set(['/login']);
+// 電波チェックは現場でセッションが切れていても開けるようにする（業務データは出さない）
+const PUBLIC_PAGES = new Set(['/login', '/check']);
 
 /* ------------------------------------------------------------------ *
  * 初回起動時の管理者アカウント作成
