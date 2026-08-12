@@ -108,3 +108,15 @@ test('毎回ちがう鍵と通し番号で作られる', () => {
 test('アドレスが1つも無ければエラーにする', () => {
   assert.throws(() => createCertificates({ sans: [] }), /アドレスが1つもありません/);
 });
+
+test('ネットワークが変わってIPが変わると、証明書が合わなくなることを検出できる', () => {
+  // テザリングに切り替えた、島を移した、DHCPでIPが変わった、などで起きる。
+  // 黙って「スマホでカメラが使えない」状態になるので、気づける必要がある。
+  const server = new X509Certificate(make().serverPem);
+
+  const beforeMove = ['192.168.1.23'];
+  const afterMove = ['192.168.43.101']; // スマホのテザリングにつないだ場合など
+
+  assert.deepEqual(beforeMove.filter((ip) => !server.checkIP(ip)), [], '元のIPで合わなくなっている');
+  assert.deepEqual(afterMove.filter((ip) => !server.checkIP(ip)), afterMove, 'IPの変化を検出できない');
+});

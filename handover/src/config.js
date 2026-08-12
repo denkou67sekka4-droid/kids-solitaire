@@ -1,4 +1,5 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { X509Certificate } from 'node:crypto';
 import { hostname, networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -21,6 +22,30 @@ export const publicUrl = () => (process.env.HANDOVER_PUBLIC_URL ?? '').replace(/
 export const hasCertificate = () =>
   existsSync(resolve(CERT_DIR, 'server.pfx')) ||
   (existsSync(resolve(CERT_DIR, 'server.key')) && existsSync(resolve(CERT_DIR, 'server.crt')));
+
+/**
+ * いま持っているIPアドレスが、証明書に入っているかを調べる。
+ *
+ * ネットワークが変わる（テザリングに切り替えた、DHCPでIPが変わった、
+ * 別の島に移した）と、証明書に書いていないアドレスになる。
+ * するとブラウザは証明書を拒否し、カメラも使えなくなる。
+ * しかも「昨日まで動いていたのに」という形で出るので原因にたどり着きにくい。
+ * 起動時と画面で知らせて、証明書を作り直せば直ることが分かるようにする。
+ */
+export function certificateCoverage() {
+  const addrs = lanAddresses();
+  const crt = resolve(CERT_DIR, 'server.crt');
+  if (!existsSync(crt)) return { hasCert: false, missing: [], covered: addrs };
+
+  try {
+    const cert = new X509Certificate(readFileSync(crt));
+    const missing = addrs.filter((ip) => !cert.checkIP(ip));
+    return { hasCert: true, missing, covered: addrs.filter((ip) => !missing.includes(ip)) };
+  } catch {
+    // 証明書が壊れているなら、作り直せば直る。ここでは判定しない。
+    return { hasCert: true, missing: [], covered: addrs };
+  }
+}
 
 /** このPCが社内LANで持っているIPv4アドレス */
 export function lanAddresses() {

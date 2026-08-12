@@ -319,6 +319,8 @@ route('GET', '/api/connect', async (ctx) => {
     httpsPort: config.HTTPS_PORT,
     // スマホに入れるCA証明書が用意できているか
     caAvailable: existsSync(resolve(config.CERT_DIR, 'ca.crt')),
+    // 証明書に入っていないアドレス（ネットワークが変わると出る）
+    certMissing: config.certificateCoverage().missing,
   });
 });
 

@@ -3,7 +3,7 @@ import { api, esc, mountAppBar } from './app.js';
 await mountAppBar({ title: 'スマホ・他のPCをつなぐ', back: '/' });
 
 const content = document.getElementById('content');
-const { secure, urls, httpUrls, caAvailable } = await api('/api/connect');
+const { secure, urls, httpUrls, caAvailable, certMissing } = await api('/api/connect');
 
 if (!urls.length) {
   content.innerHTML = `
@@ -14,6 +14,15 @@ if (!urls.length) {
     </div>`;
 } else {
   content.innerHTML = `
+    ${certMissing?.length ? `
+      <div class="note danger">
+        <strong>証明書を作り直してください</strong>
+        このPCのアドレス（<b>${esc(certMissing.join(', '))}</b>）が証明書に入っていません。<br>
+        ネットワークが変わったか、社内でIPが変わった可能性があります。<br>
+        <b>このままではスマホでカメラが使えません。</b><br>
+        事務PCで <b>make-cert.bat</b> をダブルクリックし、<b>start.bat</b> を起動しなおしてください。
+      </div>` : ''}
+
     ${secure ? '' : `
       <div class="note warn">
         <strong>いまのままではカメラが使えません</strong>

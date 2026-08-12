@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { HttpError, json, parseCookies, securityHeaders, send, serveStatic } from './http.js';
 import { matchRoute, SESSION_COOKIE } from './routes.js';
 import * as store from './db.js';
-import { CERT_DIR, HTTP_PORT, HTTPS_PORT, PUBLIC_DIR, lanAddresses } from './config.js';
+import { CERT_DIR, HTTP_PORT, HTTPS_PORT, PUBLIC_DIR, certificateCoverage, lanAddresses } from './config.js';
 import { hostname } from 'node:os';
 
 /** URL のパスと、実際に返す HTML ファイル */
@@ -207,6 +207,18 @@ function start() {
     https.listen(HTTPS_PORT, '0.0.0.0', () => {
       console.log(`HTTPS : https://localhost:${HTTPS_PORT}`);
       for (const a of addrs) console.log(`        https://${a}:${HTTPS_PORT}   ← スマホはこちら`);
+
+      // ネットワークが変わってIPが変わると、証明書に書いていないアドレスになる。
+      // 黙って「スマホでカメラが使えない」状態になるので、ここで気づけるようにする。
+      const { missing } = certificateCoverage();
+      if (missing.length) {
+        console.log(
+          `\n[!] このPCのアドレス（${missing.join(', ')}）が証明書に入っていません。\n` +
+          '    ネットワークが変わったか、IPが変わった可能性があります。\n' +
+          '    このままではスマホでカメラが使えません。\n' +
+          '    make-cert.bat をダブルクリックして作り直してください。\n'
+        );
+      }
     });
   } else {
     console.log(
